@@ -21,7 +21,7 @@
     if (THREE) return THREE;
     let lastErr = null;
     for (const url of C.THREE_URLS) {
-      try { THREE = await import(url); G.threeUrl = url; return THREE; } catch (e) { lastErr = e; }
+      try { THREE = await import(url); G.threeUrl = url; G.THREE = THREE; return THREE; } catch (e) { lastErr = e; }
     }
     throw lastErr || new Error('three.js failed to load');
   }
@@ -92,6 +92,7 @@
       this._initScene();
       this._bindWorld();
       if (G.Discovery) G.Discovery.attach(this);
+      if (G.Bots) G.Bots.attach(this);
       this._bindInput();
       this._spawnStartAtoms();
       this.booted = true;
@@ -115,6 +116,7 @@
 
     destroy() {
       cancelAnimationFrame(this._raf);
+      if (G.Bots) G.Bots.removeAll();
       W.reset();
       if (this.renderer) { this.renderer.dispose(); this.renderer.domElement.remove(); }
       if (this.hud) this.hud.root.remove();
@@ -553,6 +555,7 @@
         if ((this.mouse.fireHeld || this.keys.has('Space') || this.touch.fire) && this.gun !== 'c2c') this._trigger();
         this._updateSeq(dt);
         W.step(dt, { shipPos: this.ship.position, shipRadius: 2.2 });
+        if (G.Bots) G.Bots.update(dt);
         this.targetTimer -= dt;
         if (this.targetTimer <= 0) { this.targetTimer = 0.5; this._checkTargets(); }
         if (this.rainOn) { this.rainTimer -= dt; if (this.rainTimer <= 0) { this.rainTimer = C.RAIN_INTERVAL; this._rainOne(); } }
@@ -584,6 +587,7 @@
           else if (c === 'KeyM') { this.rainOn = !this.rainOn; this._status('🌧️ Molecule rain ' + (this.rainOn ? 'ON' : 'OFF')); }
           else if (c === 'KeyP') { this.paused ? this.resume() : this.pause(); this._status(this.paused ? '⏸ Paused' : '▶ Resumed'); }
           else if (c === 'KeyH') this.hud.help.hidden = !this.hud.help.hidden;
+          else if (c === 'KeyJ' && G.Bots) G.Bots.toggleAll();
           else if (c === 'KeyK' && G.Discovery) { if (e.shiftKey) G.Discovery.reset(); else G.Discovery.toggle(); }
           else if (c === 'Space' && this.gun === 'c2c') this.fireC2C();
           else if (c === 'Escape') { this.hud.idPanel.hidden = true; this.hud.help.hidden = true; }
@@ -684,6 +688,7 @@
       h.actions = el('div', { className: 's3g-actions' }, [
         mkBtn('🧪 What did I build? (B)', () => this.identify()),
         mkBtn('🌧️ Rain (M)', () => { this.rainOn = !this.rainOn; this._status('🌧️ Molecule rain ' + (this.rainOn ? 'ON' : 'OFF')); }),
+        mkBtn('🤖 Bots (J)', () => { if (G.Bots) G.Bots.toggleAll(); }),
         mkBtn('🔊 Sound', (e) => { A.setMuted(!A.muted); e.target.textContent = A.muted ? '🔇 Sound' : '🔊 Sound'; }),
         mkBtn('❔ Help (H)', () => { h.help.hidden = !h.help.hidden; })
       ]);
@@ -711,6 +716,7 @@
         ['C', 'c2c 13 (chromatic) ⇄ c2c 8 (major)'], ['Z / X · wheel', 'atom element'], ['B', 'What did I build?'],
         ['T', 'swap in PubChem 3D conformer'], ['M', 'molecule rain on/off'], ['P', 'pause'], ['H', 'help'],
         ['K · Shift+K', 'FIRST DISCOVERY banners on/off · reset discoveries'],
+        ['J', 'bots: spawn all 10 / remove all'],
         ['Touch', 'left: move · right: steer · buttons']
       ];
       const helpList = el('dl', { className: 's3g-help-list' });

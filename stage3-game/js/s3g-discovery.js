@@ -54,6 +54,8 @@
         this.discover('element:' + d.symbol, NAMES[d.symbol] || ('Element ' + d.symbol), 'NEW ELEMENT');
       } else if ((type === 'bondAdded' && d.byPlayer) || (type === 'bondChanged' && d.order > 1)) {
         this.discover('bond:' + d.order, BONDS[d.order] || ('Bond order ' + d.order), 'NEW BOND TYPE');
+      } else if (type === 'hit' && d.dot && d.dot.owner === 'bot') {
+        // bots' own shots are not the player's discoveries
       } else if (type === 'hit' && d.dot && d.dot.shot && (d.result !== 'energized' || d.dot.shot.effect === 'harmony')) {
         const e = d.dot.shot.effect;   // only when the effect really did something (bonded / order+1 / broke-bond)
         this.discover('effect:' + e, EFFECTS[e] || e, 'NEW c2c ENERGY');
