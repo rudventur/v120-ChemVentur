@@ -1,0 +1,22 @@
+--- a/js/main.js
++++ b/js/main.js
+@@ -325,6 +325,19 @@
+     // SHIFT + Mouse Wheel = Change stage!
+     changeStage(delta) {
+       const oldStage = this.stage;
++
++      // 🧬 v120 STAGE 3: going past Stage 2 opens the 3D overlay
++      // (js/stage3-viewer.js). The 2D game stays on Stage 2 underneath, so
++      // everything that reads STAGES[game.stage] keeps working.
++      if (oldStage + delta > 2 && CHEMVENTUR.Stage3 && typeof CHEMVENTUR.Stage3.open === 'function') {
++        if (oldStage !== 2) {
++          this.stage = 2;
++          this.onStageChange(oldStage, 2);
++        }
++        CHEMVENTUR.Stage3.open();
++        return;
++      }
++
+       this.stage = Math.max(0, Math.min(2, this.stage + delta));
+       
+       if (this.stage !== oldStage) {

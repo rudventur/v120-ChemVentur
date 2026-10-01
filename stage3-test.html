@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧬 ChemVentur Stage 3 · standalone test</title>
+  <link rel="stylesheet" href="css/stage3.css">
+  <style>
+    body { margin: 0; min-height: 100vh; background: #001100; color: #00ff41; font-family: "Courier New", monospace; }
+    .t-bar { padding: 16px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .t-bar h1 { font-size: 18px; margin: 0 12px 0 0; text-shadow: 0 0 10px #00ff41; }
+    .t-bar p { width: 100%; margin: 4px 0 0; font-size: 11px; color: #00aa2a; }
+  </style>
+</head>
+<body>
+  <div class="t-bar">
+    <h1>🧬 Stage 3 standalone test</h1>
+    <button type="button" class="s3-btn" id="t-open">Open Stage 3</button>
+    <button type="button" class="s3-btn" id="t-mock">Mock-build C–C–O + identify</button>
+    <button type="button" class="s3-btn" id="t-clear">Clear Stage 3 cache</button>
+    <p>Runs without the game: RDKit is lazy-loaded by stage3-chem.js; the mock button fakes CHEMVENTUR.MolecularSystem.
+       URL params: <code>?q=aspirin</code> opens and loads a molecule, <code>?mock=1</code> runs the mock build.</p>
+  </div>
+
+  <script src="js/stage3-chem.js"></script>
+  <script src="js/stage3-viewer.js"></script>
+  <script>
+    (function () {
+      var CV = window.CHEMVENTUR;
+
+      // Minimal stand-ins for the game objects Stage 3 reads (shapes match molecular.js / particles.js)
+      function mockBuildEthanol() {
+        var C1 = { p: 6, n: 6, e: 6, x: 400, y: 300, bonds: [] };
+        var C2 = { p: 6, n: 6, e: 6, x: 450, y: 300, bonds: [] };
+        var O  = { p: 8, n: 8, e: 8, x: 475, y: 257, bonds: [] };
+        var stray = { p: 1, n: 0, e: 1, x: 100, y: 100, bonds: [] };          // unbonded, ignored
+        var b1 = { atom1: C1, atom2: C2, type: 'SINGLE' };
+        var b2 = { atom1: C2, atom2: O,  type: 'SINGLE' };
+        CV.Game = { ship: { x: 420, y: 320 }, atoms: [C1, C2, O, stray] };
+        CV.MolecularSystem = { bonds: [b1, b2] };
+      }
+
+      document.getElementById('t-open').addEventListener('click', function () { CV.Stage3.toggle(); });
+      document.getElementById('t-mock').addEventListener('click', function () { mockBuildEthanol(); CV.Stage3.whatDidIBuild(); });
+      document.getElementById('t-clear').addEventListener('click', function () { CV.Stage3Chem.Cache.clear(); });
+
+      var params = new URLSearchParams(location.search);
+      if (params.get('mock')) { mockBuildEthanol(); CV.Stage3.whatDidIBuild(); }
+      else if (params.get('q')) CV.Stage3.open(params.get('q'));
+
+      window.__stage3MockBuild = mockBuildEthanol; // used by tests/stage3-headless.js
+    })();
+  </script>
+</body>
+</html>

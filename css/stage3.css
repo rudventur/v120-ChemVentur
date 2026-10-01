@@ -1,0 +1,189 @@
+/* ============================================
+   🧬 CHEMVENTUR STAGE 3 - 3D MOLECULE PANEL
+   NEW file. Uses the v118 theme variables from css/main.css when present,
+   with fallbacks so the panel also looks right standalone.
+   ============================================ */
+
+.stage3-panel {
+  --s3-green: var(--neon-green, #00ff41);
+  --s3-green-dim: var(--neon-green-dim, #00aa2a);
+  --s3-cyan: var(--color-ebeam, #00ffff);
+  --s3-warn: var(--color-warning, #ffaa00);
+  --s3-danger: var(--color-danger, #ff0044);
+  --s3-bg: var(--bg-primary, #001100);
+  --s3-bg2: var(--bg-input, #002200);
+  --s3-font: var(--font-main, "Courier New", monospace);
+
+  display: none;
+  position: fixed;
+  inset: 3vh 3vw;
+  z-index: 2000;
+  flex-direction: column;
+  background: linear-gradient(135deg, var(--s3-bg), var(--s3-bg2));
+  border: 3px solid var(--s3-green);
+  border-radius: 10px;
+  box-shadow: 0 0 25px rgba(0, 255, 65, 0.35), inset 0 0 40px rgba(0, 255, 65, 0.05);
+  color: var(--s3-green);
+  font-family: var(--s3-font);
+  font-size: 12px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.stage3-panel.visible { display: flex; }
+.stage3-panel *, .stage3-panel *::before, .stage3-panel *::after { box-sizing: border-box; }
+
+/* ---------- header ---------- */
+.s3-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--s3-green-dim);
+  background: rgba(0, 255, 65, 0.06);
+}
+.s3-title {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px var(--s3-green);
+}
+.s3-sub { color: var(--s3-cyan); font-size: 10px; opacity: 0.8; flex: 1; }
+
+/* ---------- layout ---------- */
+.s3-body { display: flex; flex: 1; min-height: 0; }
+.s3-stage {
+  position: relative;
+  flex: 1 1 62%;
+  min-width: 0;
+  min-height: 0;
+  border-right: 2px solid var(--s3-green-dim);
+  background: #000a03;
+}
+.s3-viewer { position: absolute; inset: 0; }
+.s3-side {
+  flex: 0 0 340px;
+  max-width: 380px;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ---------- overlay + badge ---------- */
+.s3-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  background: rgba(0, 10, 3, 0.55);
+  color: var(--s3-cyan);
+  font-size: 14px;
+  text-shadow: 0 0 8px var(--s3-cyan);
+  pointer-events: none;
+  z-index: 2;
+}
+.s3-overlay[hidden] { display: none; }
+.s3-badge {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 3;
+  padding: 3px 8px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 10px;
+  pointer-events: none;
+}
+.s3-badge:empty { display: none; }
+.s3-badge-3d { color: var(--s3-green); }
+.s3-badge-2d { color: var(--s3-warn); }
+
+/* ---------- controls ---------- */
+.s3-btn {
+  background: var(--s3-bg2);
+  color: var(--s3-green);
+  border: 2px solid var(--s3-green);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-family: var(--s3-font);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.s3-btn:hover:not(:disabled), .s3-btn.active {
+  background: var(--s3-green);
+  color: var(--s3-bg);
+  box-shadow: 0 0 12px var(--s3-green);
+}
+.s3-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.s3-close { margin-left: auto; border-color: var(--s3-danger); color: var(--s3-danger); }
+.s3-close:hover { background: var(--s3-danger) !important; color: #000 !important; box-shadow: 0 0 12px var(--s3-danger) !important; }
+.s3-build { border-color: var(--s3-cyan); color: var(--s3-cyan); }
+.s3-build:hover:not(:disabled) { background: var(--s3-cyan); box-shadow: 0 0 12px var(--s3-cyan); }
+
+.s3-search { display: flex; gap: 5px; }
+.s3-select, .s3-input {
+  background: #001100;
+  color: var(--s3-cyan);
+  border: 2px solid var(--s3-cyan);
+  border-radius: 5px;
+  font-family: var(--s3-font);
+  font-size: 11px;
+  padding: 6px;
+}
+.s3-input { flex: 1; min-width: 0; }
+.s3-input:focus, .s3-select:focus { outline: none; box-shadow: 0 0 10px var(--s3-cyan); }
+
+.s3-quick { display: flex; flex-wrap: wrap; gap: 4px; }
+.s3-chip { font-size: 10px; padding: 3px 6px; }
+.s3-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.s3-row .s3-btn { flex: 1 1 auto; }
+
+/* ---------- info ---------- */
+.s3-info {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 3px 10px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--s3-green-dim);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+}
+.s3-info dt { color: var(--s3-green-dim); }
+.s3-info dd { margin: 0; color: #d8ffe0; word-break: break-all; }
+.s3-info a { color: var(--s3-cyan); }
+
+.s3-depict { border: 1px solid var(--s3-green-dim); border-radius: 6px; padding: 6px; background: #ffffff; }
+.s3-depict[hidden] { display: none; }
+.s3-depict .s3-label { color: #004d14; font-size: 10px; margin-bottom: 4px; }
+.s3-depict-img { display: block; width: 100%; height: auto; max-height: 200px; object-fit: contain; }
+
+.s3-notes { margin: 0; padding-left: 16px; color: var(--s3-warn); font-size: 10px; }
+.s3-notes:empty { display: none; }
+
+.s3-status { min-height: 1.4em; font-size: 11px; }
+.s3-status.s3-ok { color: var(--s3-green); }
+.s3-status.s3-warn { color: var(--s3-warn); }
+.s3-status.s3-error { color: var(--s3-danger); }
+.s3-status.s3-info { color: var(--s3-cyan); }
+
+/* ---------- phones ---------- */
+@media (max-width: 760px) {
+  .stage3-panel { inset: 0; border-radius: 0; border-width: 2px; }
+  .s3-sub { display: none; }
+  .s3-body { flex-direction: column; }
+  .s3-stage { flex: 0 0 45vh; border-right: none; border-bottom: 2px solid var(--s3-green-dim); }
+  .s3-side { flex: 1 1 auto; max-width: none; }
+  .s3-btn { padding: 8px 10px; font-size: 12px; } /* real touch targets */
+  .s3-chip { padding: 6px 8px; }
+}
+
+/* ---------- beside the game's left panel (set by _fitBesideLeftPanel) ---------- */
+/* The game's #left-panel (z-index 10) stays visible and clickable to the left. */
+.stage3-panel.s3-beside-panel { right: 1.5vw; top: 1.5vh; bottom: 1.5vh; }
