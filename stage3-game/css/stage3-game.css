@@ -79,3 +79,14 @@
   .s3g-title { font-size: 14px; } .s3g-actions { max-width: 60vw; } .s3g-actions .s3g-btn { font-size: 10px; padding: 4px 6px; }
   .s3g-status { max-width: 90vw; bottom: auto; top: 92px; }
 }
+
+/* FIRST DISCOVERY banner (s3g-cinematic.js) */
+.s3g-discovery {
+  position: absolute; left: 50%; top: 18%; transform: translateX(-50%); text-align: center; pointer-events: none;
+  padding: 10px 26px; border: 2px solid var(--cy); border-radius: 10px; background: rgba(0, 20, 12, .55);
+  box-shadow: 0 0 24px var(--cy), inset 0 0 18px rgba(0, 255, 255, .25); transition: opacity .15s linear;
+}
+.s3g-discovery[hidden] { display: none; }
+.s3g-discovery-kind { font-size: 12px; letter-spacing: 3px; color: var(--cy); }
+.s3g-discovery-name { font-size: 28px; font-weight: bold; color: #fff; text-shadow: 0 0 12px var(--g), 0 0 26px var(--cy); }
+@media (max-width: 640px) { .s3g-discovery-name { font-size: 18px; } }

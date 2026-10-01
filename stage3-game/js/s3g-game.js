@@ -91,6 +91,7 @@
       }
       this._initScene();
       this._bindWorld();
+      if (G.Cinematic) G.Cinematic.attach(this);
       this._bindInput();
       this._spawnStartAtoms();
       this.booted = true;
@@ -341,8 +342,11 @@
       // chase camera
       const off = new THREE.Vector3(0, 2.8, 9.5).applyQuaternion(this.ship.quaternion);
       const want = this.ship.position.clone().add(off);
-      this.camera.position.lerp(want, 1 - Math.exp(-dt * 7));
-      this.camera.lookAt(this.ship.position.clone().add(this._forward().multiplyScalar(10)));
+      this.camBase = this.camBase || this.camera.position.clone();   // chase camera (cinematic blends from it)
+      this.camBase.lerp(want, 1 - Math.exp(-dt * 7));
+      this.camLook = this.ship.position.clone().add(this._forward().multiplyScalar(10));
+      this.camera.position.copy(this.camBase);
+      this.camera.lookAt(this.camLook);
     },
 
     // ================= GUNS =================
@@ -392,6 +396,7 @@
       const seq = { id: ++this.seqId, mode: this.c2cMode, label: G.C2C.MODES[this.c2cMode].label, shots, next: 0, t: 0, fired: [], done: false };
       this.seq = seq;
       this._status('🎵 ' + seq.label + ' firing…');
+      W.emit('c2cFired', seq);
       return new Promise(resolve => { seq.resolve = resolve; });
     },
 
@@ -479,6 +484,7 @@
       this.lastIdentify = out;
       this._showIdentify(out);
       this._status(out.error ? '❌ ' + out.error : '🧪 You built ' + out.title + (out.formula ? ' (' + out.formula + ')' : '') + '!', out.error ? 'error' : 'ok');
+      W.emit('identified', out);
       return out;
     },
 
@@ -511,6 +517,7 @@
         this.score += 10;
         comp.atoms.forEach(a => { a.flash = { color: '#00ff41', t: 1.2 }; });
         this._status('🎯 TARGET COMPLETE: ' + t.name + ' ' + t.formula + '! +10', 'ok');
+        W.emit('targetDone', { name: t.name, formula: t.formula, atoms: comp.atoms });
         if (this.started) [523.25, 659.25, 783.99].forEach((f, i) => setTimeout(() => A.blip(f, 0.12, 'triangle', 0.15), i * 90));
         this.targetIdx++;
       }
@@ -544,7 +551,10 @@
       if (this.fpsAcc >= 0.5) { this.fps = Math.round(this.fpsFrames / this.fpsAcc); this.fpsAcc = 0; this.fpsFrames = 0; }
 
       if (!this.paused) {
+        const realDt = dt;
+        dt *= G.Cinematic ? G.Cinematic.timeScale : 1;   // slow motion during a FIRST DISCOVERY
         this._updateShip(dt);
+        if (G.Cinematic) G.Cinematic.update(realDt);
         this.fireCooldown = Math.max(0, this.fireCooldown - dt);
         if ((this.mouse.fireHeld || this.keys.has('Space') || this.touch.fire) && this.gun !== 'c2c') this._trigger();
         this._updateSeq(dt);
@@ -579,6 +589,7 @@
           else if (c === 'KeyM') { this.rainOn = !this.rainOn; this._status('🌧️ Molecule rain ' + (this.rainOn ? 'ON' : 'OFF')); }
           else if (c === 'KeyP') { this.paused ? this.resume() : this.pause(); this._status(this.paused ? '⏸ Paused' : '▶ Resumed'); }
           else if (c === 'KeyH') this.hud.help.hidden = !this.hud.help.hidden;
+          else if (c === 'KeyK' && G.Cinematic) { if (e.shiftKey) G.Cinematic.reset(); else G.Cinematic.toggle(); }
           else if (c === 'Space' && this.gun === 'c2c') this.fireC2C();
           else if (c === 'Escape') { this.hud.idPanel.hidden = true; this.hud.help.hidden = true; }
         }
@@ -704,6 +715,7 @@
         ['Mouse', 'aim (crosshair)'], ['Left click · Space', 'fire'], ['1 · 2 · 3', 'ATOM gun · c2c TONE gun · BLASTER'],
         ['C', 'c2c 13 (chromatic) ⇄ c2c 8 (major)'], ['Z / X · wheel', 'atom element'], ['B', 'What did I build?'],
         ['T', 'swap in PubChem 3D conformer'], ['M', 'molecule rain on/off'], ['P', 'pause'], ['H', 'help'],
+        ['K · Shift+K', 'first-discovery cinematics on/off · reset discoveries'],
         ['Touch', 'left: move · right: steer · buttons']
       ];
       const helpList = el('dl', { className: 's3g-help-list' });
