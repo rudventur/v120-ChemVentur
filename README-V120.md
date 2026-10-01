@@ -5,6 +5,13 @@
 v120 is the v118/v119 game unchanged, plus **Stage 3**: a 3D molecule viewer that opens over the game.
 The game logic, physics and multiplayer are untouched. The only existing file that changed is `index.html` (3 tags and the version label).
 
+## 🚀 Stage 3 3D game (standalone, new)
+A first playable 3D Stage 3: fly a ship, shoot and bond CPK atoms, use the **c2c tone gun** (`c2c 13` chromatic / `c2c 8` major), and press **B** to identify what you built with RDKit and PubChem.
+- Play: [`stage3-game/index.html`](stage3-game/index.html)
+- Docs: [`stage3-game/README-STAGE3-GAME.md`](stage3-game/README-STAGE3-GAME.md)
+
+Self-contained in `stage3-game/`, and not wired into the main game yet.
+
 ## 🆕 What's new in v120
 
 ### 🧬 Stage 3: 3D molecules

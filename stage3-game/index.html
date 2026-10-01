@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>🚀 CHEMVENTUR · Stage 3 · 3D</title>
+  <link rel="stylesheet" href="css/stage3-game.css">
+  <style>html, body { margin: 0; height: 100%; background: #000a03; overflow: hidden; } #s3g { position: fixed; inset: 0; }</style>
+</head>
+<body>
+  <div id="s3g"></div>
+
+  <script src="js/stage3-chem.js"></script>
+  <script src="js/s3g-core.js"></script>
+  <script src="js/s3g-audio.js"></script>
+  <script src="js/s3g-world.js"></script>
+  <script src="js/s3g-game.js"></script>
+  <script>
+    // ?autostart=1 skips the START screen (sound still needs a click/tap in real browsers)
+    CHEMVENTUR.Stage3Game.ready = CHEMVENTUR.Stage3Game.boot(document.getElementById('s3g'), {
+      autostart: new URLSearchParams(location.search).has('autostart')
+    });
+  </script>
+</body>
+</html>

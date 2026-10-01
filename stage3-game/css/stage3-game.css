@@ -1,0 +1,81 @@
+/* ============================================
+   🚀 CHEMVENTUR STAGE 3 GAME - NEON HUD
+   ============================================ */
+.s3g-root {
+  --g: #00ff41; --g2: #00aa2a; --cy: #00ffff; --warn: #ffaa00; --bad: #ff0044; --bg: #001100;
+  position: relative; width: 100%; height: 100%; overflow: hidden; background: #000a03;
+  font-family: "Courier New", monospace; color: var(--g); user-select: none; -webkit-user-select: none;
+}
+.s3g-canvas { position: absolute; inset: 0; display: block; cursor: none; touch-action: none; }
+.s3g-hud { position: absolute; inset: 0; pointer-events: none; }
+.s3g-hud button, .s3g-panel, .s3g-panel * { pointer-events: auto; }
+
+.s3g-tl { position: absolute; top: 10px; left: 12px; text-shadow: 0 0 8px var(--g); }
+.s3g-title { font-size: 18px; font-weight: bold; letter-spacing: 1px; }
+.s3g-stats { font-size: 11px; color: #b8ffc9; margin-top: 3px; }
+.s3g-target { font-size: 13px; color: var(--cy); margin-top: 4px; text-shadow: 0 0 8px var(--cy); }
+
+.s3g-bl { position: absolute; left: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 6px; max-width: 70vw; }
+.s3g-guns, .s3g-palette, .s3g-actions, .s3g-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.s3g-actions { position: absolute; top: 10px; right: 12px; justify-content: flex-end; max-width: 46vw; }
+
+.s3g-btn, .s3g-chip, .s3g-tbtn {
+  background: rgba(0, 34, 0, 0.85); color: var(--g); border: 2px solid var(--g); border-radius: 4px;
+  padding: 5px 9px; font-family: inherit; font-size: 11px; cursor: pointer;
+  transition: background .15s, color .15s, box-shadow .15s;
+}
+.s3g-btn:hover:not(:disabled), .s3g-btn.active { background: var(--g); color: var(--bg); box-shadow: 0 0 12px var(--g); }
+.s3g-btn:disabled { opacity: .4; cursor: not-allowed; }
+.s3g-mode { border-color: var(--cy); color: var(--cy); min-width: 64px; }
+.s3g-mode.active { background: var(--cy); color: var(--bg); box-shadow: 0 0 12px var(--cy); }
+.s3g-chip { --chip: #fff; border-color: var(--chip); color: var(--chip); min-width: 30px; padding: 3px 6px; }
+.s3g-chip.active { background: var(--chip); color: #000; box-shadow: 0 0 10px var(--chip); }
+.s3g-inv { font-size: 10px; color: #9be89b; }
+
+.s3g-status {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); max-width: 46vw; text-align: center;
+  font-size: 12px; padding: 4px 10px; background: rgba(0, 0, 0, .55); border: 1px solid currentColor; border-radius: 4px;
+}
+.s3g-status:empty { display: none; }
+.s3g-status.s3g-ok { color: var(--g); } .s3g-status.s3g-info { color: var(--cy); }
+.s3g-status.s3g-warn { color: var(--warn); } .s3g-status.s3g-error { color: var(--bad); }
+
+.s3g-cross {
+  position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px;
+  border: 2px solid var(--g); border-radius: 50%; box-shadow: 0 0 10px var(--g);
+}
+.s3g-cross::after { content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; background: var(--g); border-radius: 50%; }
+
+.s3g-panel {
+  position: absolute; background: linear-gradient(135deg, #001100, #002200); border: 3px solid var(--g);
+  border-radius: 10px; padding: 12px; box-shadow: 0 0 25px rgba(0, 255, 65, .35); font-size: 12px;
+}
+.s3g-panel[hidden] { display: none; }
+.s3g-panel-title { font-size: 15px; margin-bottom: 8px; text-shadow: 0 0 8px var(--g); }
+.s3g-id { right: 12px; top: 56px; width: min(360px, 92vw); }
+.s3g-info { display: grid; grid-template-columns: max-content 1fr; gap: 3px 10px; margin: 0 0 8px; }
+.s3g-info dt { color: var(--g2); } .s3g-info dd { margin: 0; color: #d8ffe0; word-break: break-all; }
+.s3g-info a { color: var(--cy); }
+.s3g-notes { margin: 0 0 8px; padding-left: 16px; color: var(--warn); font-size: 10px; } .s3g-notes:empty { display: none; }
+.s3g-help { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, 94vw); max-height: 86vh; overflow: auto; }
+.s3g-help-list { display: grid; grid-template-columns: max-content 1fr; gap: 3px 14px; margin: 0 0 8px; }
+.s3g-help-list dt { color: var(--cy); } .s3g-help-list dd { margin: 0; color: #d8ffe0; }
+.s3g-small { font-size: 10px; color: #9be89b; line-height: 1.4; }
+
+.s3g-start {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  background: radial-gradient(circle, rgba(0, 40, 10, .55), rgba(0, 0, 0, .8)); pointer-events: auto; text-align: center; padding: 20px;
+}
+.s3g-start[hidden] { display: none; }
+.s3g-start-title { font-size: 34px; font-weight: bold; text-shadow: 0 0 18px var(--g); }
+.s3g-start-sub { font-size: 14px; color: var(--cy); max-width: 560px; }
+.s3g-start-btn { font-size: 20px; padding: 12px 30px; }
+
+.s3g-touchbar { display: none; position: absolute; right: 10px; bottom: 60px; flex-direction: column; gap: 8px; }
+.s3g-touch .s3g-touchbar { display: flex; }
+.s3g-touch .s3g-cross { display: none; }
+.s3g-tbtn { font-size: 14px; padding: 12px 14px; min-width: 70px; }
+@media (max-width: 640px) {
+  .s3g-title { font-size: 14px; } .s3g-actions { max-width: 60vw; } .s3g-actions .s3g-btn { font-size: 10px; padding: 4px 6px; }
+  .s3g-status { max-width: 90vw; bottom: auto; top: 92px; }
+}
