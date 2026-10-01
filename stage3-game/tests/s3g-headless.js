@@ -33,10 +33,6 @@ const CHROMATIC = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], MAJOR = [0, 2, 4, 
 
   await page.evaluate(() => CHEMVENTUR.Stage3Game.start());
   await sleep(600);
-  // the core checks below run with cinematics OFF (slow motion would change their timing); K is tested here
-  await page.keyboard.press('KeyK');
-  const cinOff = await page.evaluate(() => CHEMVENTUR.Stage3Game.Cinematic.debugState().enabled);
-  ok(cinOff === false, 'K turns first-discovery cinematics off', 'enabled=' + cinOff);
   const px = await page.evaluate(() => CHEMVENTUR.Stage3Game.debug.sampleCanvas());
   st = await page.evaluate(() => CHEMVENTUR.Stage3Game.debug.state());
   ok(px.litFraction > 0.01 && st.drawCalls > 20, 'WebGL renders the 3D scene', JSON.stringify({ px, drawCalls: st.drawCalls, triangles: st.triangles, atoms: st.atoms, fps: st.fps }));
@@ -90,67 +86,64 @@ const CHROMATIC = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], MAJOR = [0, 2, 4, 
   await sleep(500);
   await page.screenshot({ path: path.join(outDir, 'screenshot-identify.png') });
 
-  // ===== FIRST DISCOVERY cinematic =====
-  const cin = () => page.evaluate(() => CHEMVENTUR.Stage3Game.Cinematic.debugState());
+  // ===== FIRST DISCOVERY banners (no camera move, no slow motion) =====
+  const disc = () => page.evaluate(() => CHEMVENTUR.Stage3Game.Discovery.debugState());
+  await page.waitForFunction(() => { const D = CHEMVENTUR.Stage3Game.Discovery; return !D.active && !D.queue.length; }, { timeout: 30000 });
   await page.keyboard.down('ShiftLeft'); await page.keyboard.press('KeyK'); await page.keyboard.up('ShiftLeft');
-  let cs = await cin();
+  let ds = await disc();
   const storedBefore = await page.evaluate(() => localStorage.getItem('cv.s3g.discoveries.v1'));
-  ok(cs.discovered.length === 0 && storedBefore === '{}', 'Shift+K resets discoveries (localStorage cleared)', 'discovered=' + cs.discovered.length);
+  ok(ds.discovered.length === 0 && storedBefore === '{}', 'Shift+K resets discoveries (localStorage cleared)', 'discovered=' + ds.discovered.length);
   await page.keyboard.press('KeyK');
-  cs = await cin();
-  ok(cs.enabled === true && cs.active === null && cs.timeScale === 1, 'K turns cinematics back on', JSON.stringify({ enabled: cs.enabled, timeScale: cs.timeScale }));
+  const offState = (await disc()).enabled;
+  await page.keyboard.press('KeyK');
+  ds = await disc();
+  ok(offState === false && ds.enabled === true, 'K toggles FIRST DISCOVERY banners off / on', 'off=' + !offState + ' on=' + ds.enabled);
 
-  // first single bond, 25 units ahead of the ship (world atoms, so no element discovery)
   const makeBond = () => page.evaluate(() => {
     const G = CHEMVENTUR.Stage3Game, W = G.World, g = G.Game, n = g._nose(), f = g._forward();
     const c = { x: n.x + f.x * 25, y: n.y + f.y * 25, z: n.z + f.z * 25 };
     const a = W.spawnAtom('C', { x: c.x - 0.8, y: c.y, z: c.z }, null, 'world');
     const b = W.spawnAtom('C', { x: c.x + 0.8, y: c.y, z: c.z }, null, 'world');
     W.bond(a, b, 1, true);
-    const cp = g.camera.position;
-    return { c, camDist: Math.hypot(cp.x - c.x, cp.y - c.y, cp.z - c.z) };
+    return { worldTime: W.time, t: performance.now() };
   });
+  const camToShip = () => page.evaluate(() => { const g = CHEMVENTUR.Stage3Game.Game; return g.camera.position.distanceTo(g.ship.position); });
   const ev = await makeBond();
-  await sleep(1100);
-  cs = await cin();
-  const camDist = Math.hypot(cs.camera.x - ev.c.x, cs.camera.y - ev.c.y, cs.camera.z - ev.c.z);
-  const camOff = Math.hypot(cs.camera.x - cs.camBase.x, cs.camera.y - cs.camBase.y, cs.camera.z - cs.camBase.z);
-  ok(cs.active && cs.active.key === 'bond:1' && cs.timeScale <= 0.25, 'first bond starts a cinematic with slow motion', JSON.stringify({ active: cs.active && cs.active.name, t: cs.active && cs.active.t, timeScale: cs.timeScale }));
-  ok(camDist < ev.camDist * 0.5 && camOff > 5, 'camera moves into a close-up', 'distance to event ' + ev.camDist.toFixed(1) + ' -> ' + camDist.toFixed(1) + ', offset from chase cam ' + camOff.toFixed(1));
-  ok(cs.bannerVisible && cs.bannerText === 'FIRST DISCOVERY: Single bond', 'neon banner shows', JSON.stringify(cs.bannerText));
-  await page.waitForFunction(() => !CHEMVENTUR.Stage3Game.Cinematic.active, { timeout: 8000 });
-  cs = await cin();
-  const ended = cs.log.find(l => l.key === 'bond:1');
-  ok(ended && Math.abs(ended.ms - 2500) < 400 && cs.timeScale === 1 && !cs.bannerVisible, 'cinematic ends after ~2.5 s, speed and camera back to normal', JSON.stringify({ ms: ended && ended.ms, timeScale: cs.timeScale, banner: cs.bannerVisible }));
-  await sleep(300);
-  const back = await cin();
-  const camBack = Math.hypot(back.camera.x - back.camBase.x, back.camera.y - back.camBase.y, back.camera.z - back.camBase.z);
-  ok(camBack < 0.01, 'camera is back on the chase position', 'offset=' + camBack.toFixed(3));
+  await sleep(1000);
+  ds = await disc();
+  const timing = await page.evaluate(() => ({ worldTime: CHEMVENTUR.Stage3Game.World.time, t: performance.now() }));
+  const rate = (timing.worldTime - ev.worldTime) / ((timing.t - ev.t) / 1000);
+  const cd = await camToShip();
+  ok(ds.active && ds.active.key === 'bond:1' && ds.bannerVisible && ds.bannerText === 'FIRST DISCOVERY: Single bond', 'first bond shows the banner', JSON.stringify({ banner: ds.bannerText, t: ds.active && ds.active.t }));
+  ok(rate > 0.8 && cd < 12, 'no slow motion and no camera close-up', 'game time rate ' + rate.toFixed(2) + 'x, camera to ship ' + cd.toFixed(1));
+  await page.waitForFunction(() => !CHEMVENTUR.Stage3Game.Discovery.active, { timeout: 8000 });
+  ds = await disc();
+  const ended = ds.log.find(l => l.key === 'bond:1');
+  ok(ended && Math.abs(ended.ms - 2500) < 400 && !ds.bannerVisible, 'banner hides after ~2.5 s', 'ms=' + (ended && ended.ms));
   const stored = await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cv.s3g.discoveries.v1'))));
   ok(stored.includes('bond:1'), 'discovery persisted in localStorage', JSON.stringify(stored));
 
-  const logLen = back.log.length;
+  const logLen = ds.log.length;
   await makeBond();
-  await sleep(700);
-  cs = await cin();
-  ok(!cs.active && cs.queue.length === 0 && cs.log.length === logLen && cs.timeScale === 1, 'a second identical bond does NOT retrigger', JSON.stringify({ active: cs.active, queue: cs.queue, log: cs.log.length }));
+  await sleep(500);
+  ds = await disc();
+  ok(!ds.active && ds.queue.length === 0 && ds.log.length === logLen && !ds.bannerVisible, 'a second identical bond does NOT show the banner again', JSON.stringify({ active: ds.active, queue: ds.queue, log: ds.log.length }));
 
-  // new molecule: C-C-O skeleton -> queue (Carbon, Oxygen) then Ethanol once identified; one at a time
   const idP = page.evaluate(() => CHEMVENTUR.Stage3Game.debug.identifyEthanolSkeleton());
   await sleep(250);
-  cs = await cin();
-  ok(cs.active && cs.active.name === 'Carbon' && cs.queue.includes('Oxygen'), 'overlapping discoveries queue (one plays, others wait)', JSON.stringify({ active: cs.active && cs.active.name, queue: cs.queue }));
+  ds = await disc();
+  ok(ds.active && ds.active.name === 'Carbon' && ds.queue.includes('Oxygen'), 'overlapping discoveries queue (one banner at a time)', JSON.stringify({ active: ds.active && ds.active.name, queue: ds.queue }));
   const id2 = await idP;
-  await page.waitForFunction(() => { const a = CHEMVENTUR.Stage3Game.Cinematic.active; return a && a.key === 'mol:cid702' && a.t > 1.0; }, { timeout: 15000, polling: 50 });
-  cs = await cin();
-  ok(id2 && id2.cid === 702 && cs.bannerText === 'FIRST DISCOVERY: Ethanol' && cs.timeScale <= 0.25, 'new molecule -> FIRST DISCOVERY: Ethanol (PubChem name)', JSON.stringify({ banner: cs.bannerText, timeScale: cs.timeScale }));
-  await page.screenshot({ path: path.join(outDir, 'screenshot-cinematic.png') });
-  await page.waitForFunction(() => !CHEMVENTUR.Stage3Game.Cinematic.active && !CHEMVENTUR.Stage3Game.Cinematic.queue.length, { timeout: 8000 });
-  const n2 = (await cin()).log.length;
+  await page.waitForFunction(() => { const a = CHEMVENTUR.Stage3Game.Discovery.active; return a && a.key === 'mol:cid702' && a.t > 0.8; }, { timeout: 15000, polling: 50 });
+  ds = await disc();
+  ok(id2 && id2.cid === 702 && ds.bannerText === 'FIRST DISCOVERY: Ethanol', 'new molecule -> FIRST DISCOVERY: Ethanol (PubChem name)', JSON.stringify(ds.bannerText));
+  await page.screenshot({ path: path.join(outDir, 'screenshot-discovery.png') });
+  await page.waitForFunction(() => { const D = CHEMVENTUR.Stage3Game.Discovery; return !D.active && !D.queue.length; }, { timeout: 8000 });
+  const n2 = (await disc()).log.length;
   const id3 = await page.evaluate(() => CHEMVENTUR.Stage3Game.debug.identifyEthanolSkeleton());
   await sleep(500);
-  cs = await cin();
-  ok(id3 && id3.cid === 702 && !cs.active && cs.log.length === n2, 'identifying Ethanol again does NOT retrigger', JSON.stringify(cs.log.map(l => l.name + ' ' + l.ms + 'ms')));
+  ds = await disc();
+  ok(id3 && id3.cid === 702 && !ds.active && ds.log.length === n2, 'identifying Ethanol again does NOT show the banner again', JSON.stringify(ds.log.slice(-4).map(l => l.name + ' ' + l.ms + 'ms')));
 
   await sleep(5500); // let molecule rain run once
   st = await page.evaluate(() => CHEMVENTUR.Stage3Game.debug.state());

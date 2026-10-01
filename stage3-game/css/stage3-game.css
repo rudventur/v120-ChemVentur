@@ -80,7 +80,7 @@
   .s3g-status { max-width: 90vw; bottom: auto; top: 92px; }
 }
 
-/* FIRST DISCOVERY banner (s3g-cinematic.js) */
+/* FIRST DISCOVERY banner (s3g-discovery.js) */
 .s3g-discovery {
   position: absolute; left: 50%; top: 18%; transform: translateX(-50%); text-align: center; pointer-events: none;
   padding: 10px 26px; border: 2px solid var(--cy); border-radius: 10px; background: rgba(0, 20, 12, .55);

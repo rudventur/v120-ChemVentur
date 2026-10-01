@@ -91,7 +91,7 @@
       }
       this._initScene();
       this._bindWorld();
-      if (G.Cinematic) G.Cinematic.attach(this);
+      if (G.Discovery) G.Discovery.attach(this);
       this._bindInput();
       this._spawnStartAtoms();
       this.booted = true;
@@ -342,11 +342,8 @@
       // chase camera
       const off = new THREE.Vector3(0, 2.8, 9.5).applyQuaternion(this.ship.quaternion);
       const want = this.ship.position.clone().add(off);
-      this.camBase = this.camBase || this.camera.position.clone();   // chase camera (cinematic blends from it)
-      this.camBase.lerp(want, 1 - Math.exp(-dt * 7));
-      this.camLook = this.ship.position.clone().add(this._forward().multiplyScalar(10));
-      this.camera.position.copy(this.camBase);
-      this.camera.lookAt(this.camLook);
+      this.camera.position.lerp(want, 1 - Math.exp(-dt * 7));
+      this.camera.lookAt(this.ship.position.clone().add(this._forward().multiplyScalar(10)));
     },
 
     // ================= GUNS =================
@@ -551,10 +548,7 @@
       if (this.fpsAcc >= 0.5) { this.fps = Math.round(this.fpsFrames / this.fpsAcc); this.fpsAcc = 0; this.fpsFrames = 0; }
 
       if (!this.paused) {
-        const realDt = dt;
-        dt *= G.Cinematic ? G.Cinematic.timeScale : 1;   // slow motion during a FIRST DISCOVERY
         this._updateShip(dt);
-        if (G.Cinematic) G.Cinematic.update(realDt);
         this.fireCooldown = Math.max(0, this.fireCooldown - dt);
         if ((this.mouse.fireHeld || this.keys.has('Space') || this.touch.fire) && this.gun !== 'c2c') this._trigger();
         this._updateSeq(dt);
@@ -563,6 +557,7 @@
         if (this.targetTimer <= 0) { this.targetTimer = 0.5; this._checkTargets(); }
         if (this.rainOn) { this.rainTimer -= dt; if (this.rainTimer <= 0) { this.rainTimer = C.RAIN_INTERVAL; this._rainOne(); } }
       }
+      if (G.Discovery) G.Discovery.update(dt);   // FIRST DISCOVERY banner timing (real time)
       this._syncMeshes();
       this.renderer.render(this.scene, this.camera);
       this.hudTimer -= dt;
@@ -589,7 +584,7 @@
           else if (c === 'KeyM') { this.rainOn = !this.rainOn; this._status('🌧️ Molecule rain ' + (this.rainOn ? 'ON' : 'OFF')); }
           else if (c === 'KeyP') { this.paused ? this.resume() : this.pause(); this._status(this.paused ? '⏸ Paused' : '▶ Resumed'); }
           else if (c === 'KeyH') this.hud.help.hidden = !this.hud.help.hidden;
-          else if (c === 'KeyK' && G.Cinematic) { if (e.shiftKey) G.Cinematic.reset(); else G.Cinematic.toggle(); }
+          else if (c === 'KeyK' && G.Discovery) { if (e.shiftKey) G.Discovery.reset(); else G.Discovery.toggle(); }
           else if (c === 'Space' && this.gun === 'c2c') this.fireC2C();
           else if (c === 'Escape') { this.hud.idPanel.hidden = true; this.hud.help.hidden = true; }
         }
@@ -715,7 +710,7 @@
         ['Mouse', 'aim (crosshair)'], ['Left click · Space', 'fire'], ['1 · 2 · 3', 'ATOM gun · c2c TONE gun · BLASTER'],
         ['C', 'c2c 13 (chromatic) ⇄ c2c 8 (major)'], ['Z / X · wheel', 'atom element'], ['B', 'What did I build?'],
         ['T', 'swap in PubChem 3D conformer'], ['M', 'molecule rain on/off'], ['P', 'pause'], ['H', 'help'],
-        ['K · Shift+K', 'first-discovery cinematics on/off · reset discoveries'],
+        ['K · Shift+K', 'FIRST DISCOVERY banners on/off · reset discoveries'],
         ['Touch', 'left: move · right: steer · buttons']
       ];
       const helpList = el('dl', { className: 's3g-help-list' });
