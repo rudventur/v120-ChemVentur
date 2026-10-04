@@ -1,7 +1,7 @@
 /* CHEMVENTUR Stage 3 Game: "FIRST DISCOVERY" banners.
    The first time a new kind of matter or energy shows up (a new element you fire, a new bond order,
    a newly identified molecule, a c2c note effect, a blaster rip, a scooped atom, a c2c series, a target)
-   a neon banner "FIRST DISCOVERY: <name>" shows for ~2.5 s with a low tone. No camera move, no slow motion.
+   a neon banner "FIRST DISCOVERY: <name>" shows for ~2.5 s with a low tone, plus a short slow-mo.
    Overlapping discoveries queue and show one at a time. Discovered set persists in localStorage.
    K = banners on/off, Shift+K = reset discoveries.
    Hooks: Game.boot -> attach(game); Game._frame -> update(dt); Game emits 'identified' / 'targetDone' /
@@ -107,6 +107,7 @@
       if (b) {
         b.firstChild.textContent = '✨ FIRST DISCOVERY · ' + c.kind;
         b.lastChild.textContent = 'FIRST DISCOVERY: ' + c.name;
+        if (this.game) { this.game.slow = 2.4; this.game._status('🎬 first time: ' + c.name); }
         b.hidden = false; b.style.opacity = '0';
       }
       const A = G.Audio;

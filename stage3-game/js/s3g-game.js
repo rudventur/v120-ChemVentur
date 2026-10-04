@@ -41,9 +41,16 @@
   }
 
   const GUNS = [
-    { id: 'atom', key: '1', label: 'ATOM' },
-    { id: 'c2c', key: '2', label: 'c2c' },
-    { id: 'blaster', key: '3', label: 'BLASTER' }
+    { id: 'proton', key: '1', label: 'p⁺' },
+    { id: 'neutron', key: '2', label: 'n' },
+    { id: 'electron', key: '3', label: 'e⁻' },
+    { id: 'rain', key: '4', label: 'RAIN' },
+    { id: 'atom', key: '5', label: 'ATOM' },
+    { id: 'shotgun', key: '6', label: 'SHOT' },
+    { id: 'c2c', key: '7', label: 'c2c' },
+    { id: 'anti', key: '8', label: 'ANTI' },
+    { id: 'grav', key: '9', label: 'GRAV' },
+    { id: 'time', key: '0', label: 'TIME' }
   ];
 
   const TARGETS = [
@@ -66,7 +73,7 @@
     keys: new Set(),
     mouse: { x: 0, y: 0, ndcX: 0, ndcY: 0, has: false, fireHeld: false, steer: false, lastX: 0, lastY: 0 },
     touch: { joy: null, steer: null, fire: false },
-    gun: 'atom', elementIdx: 1, c2cMode: 'chromatic',
+    gun: 'atom', elementIdx: 1, c2cMode: 'chromatic', slow: 0,
     seq: null, seqId: 0, seqWaiters: [], sequences: [],
     fireCooldown: 0, score: 0, targetIdx: 0, targetTimer: 0,
     rainOn: true, rainTimer: 2, rainBusy: false,
@@ -108,7 +115,7 @@
       this.started = true;
       A.unlock();
       if (this.hud) this.hud.startOverlay.hidden = true;
-      this._status('🚀 Go! 1 ATOM · 2 c2c · 3 BLASTER · B = What did I build?');
+      this._status('🚀 Go! 1 p⁺ 2 n 3 e⁻ 4 RAIN 5 ATOM 6 SHOT 7 c2c 8 ANTI 9 GRAV 0 TIME · B = identify');
     },
 
     pause() { this.paused = true; },
@@ -369,6 +376,7 @@
 
     _trigger() {
       if (this.gun === 'c2c') { this.fireC2C(); return; }
+      if (G.GunRack && G.GunRack.fire(this)) return;
       if (this.fireCooldown > 0) return;
       const nose = this._nose(), dir = this._aimDir();
       const sv = { x: this.shipVel.x, y: this.shipVel.y, z: this.shipVel.z };
@@ -379,10 +387,6 @@
         if (!a) this._status('⚠️ Atom limit reached (' + C.MAX_ATOMS + '). Blast or collect some!', 'warn');
         else if (this.started) A.blip(320, 0.07, 'sawtooth', 0.08);
         this.fireCooldown = 0.18;
-      } else if (this.gun === 'blaster') {
-        W.addProjectile({ kind: 'blaster', pos: { x: nose.x, y: nose.y, z: nose.z }, vel: V.add(V.scale(dir, C.BLASTER_SPEED), sv), life: 1.6, r: 0.22, color: '#ff3355' });
-        if (this.started) A.blip(180, 0.05, 'square', 0.05);
-        this.fireCooldown = 0.12;
       }
     },
 
@@ -554,7 +558,10 @@
         this.fireCooldown = Math.max(0, this.fireCooldown - dt);
         if ((this.mouse.fireHeld || this.keys.has('Space') || this.touch.fire) && this.gun !== 'c2c') this._trigger();
         this._updateSeq(dt);
-        W.step(dt, { shipPos: this.ship.position, shipRadius: 2.2 });
+        const sim = this.slow > 0 ? dt * 0.22 : dt;
+        if (this.slow > 0) this.slow -= dt;
+        if (G.GunRack) G.GunRack.tick(this, dt);
+        W.step(sim, { shipPos: this.ship.position, shipRadius: 2.2 });
         if (G.Bots) G.Bots.update(dt);
         this.targetTimer -= dt;
         if (this.targetTimer <= 0) { this.targetTimer = 0.5; this._checkTargets(); }
@@ -576,9 +583,16 @@
         if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(c)) e.preventDefault();
         if (!this.started && (c === 'Space' || c === 'Enter')) this.start();
         if (!this.keys.has(c)) {
-          if (c === 'Digit1') this.selectGun('atom');
-          else if (c === 'Digit2') this.selectGun('c2c');
-          else if (c === 'Digit3') this.selectGun('blaster');
+          if (c === 'Digit1') this.selectGun('proton');
+          else if (c === 'Digit2') this.selectGun('neutron');
+          else if (c === 'Digit3') this.selectGun('electron');
+          else if (c === 'Digit4') this.selectGun('rain');
+          else if (c === 'Digit5') this.selectGun('atom');
+          else if (c === 'Digit6') this.selectGun('shotgun');
+          else if (c === 'Digit7') this.selectGun('c2c');
+          else if (c === 'Digit8') this.selectGun('anti');
+          else if (c === 'Digit9') this.selectGun('grav');
+          else if (c === 'Digit0') this.selectGun('time');
           else if (c === 'KeyC') this.toggleC2CMode();
           else if (c === 'KeyZ') this.cycleElement(-1);
           else if (c === 'KeyX') this.cycleElement(1);
@@ -712,7 +726,7 @@
       // help + start overlays
       const controls = [
         ['W A S D', 'fly forward / strafe / back'], ['R / F', 'up / down'], ['Arrows · right-drag', 'turn (yaw / pitch)'],
-        ['Mouse', 'aim (crosshair)'], ['Left click · Space', 'fire'], ['1 · 2 · 3', 'ATOM gun · c2c TONE gun · BLASTER'],
+        ['Mouse', 'aim (crosshair)'], ['Left click · Space', 'fire'], ['1–0', 'p⁺ n e⁻ RAIN ATOM SHOT c2c ANTI GRAV TIME'],
         ['C', 'c2c 13 (chromatic) ⇄ c2c 8 (major)'], ['Z / X · wheel', 'atom element'], ['B', 'What did I build?'],
         ['T', 'swap in PubChem 3D conformer'], ['M', 'molecule rain on/off'], ['P', 'pause'], ['H', 'help'],
         ['K · Shift+K', 'FIRST DISCOVERY banners on/off · reset discoveries'],
@@ -764,7 +778,7 @@
       h.stats.textContent = 'SCORE ' + this.score + ' · ATOMS ' + W.atoms.length + ' · BONDS ' + W.bonds.length + ' · ' + this.fps + ' FPS';
       h.target.textContent = '🎯 BUILD: ' + t.name + ' ' + t.formula;
       Object.keys(h.gunBtns).forEach(id => h.gunBtns[id].classList.toggle('active', id === this.gun));
-      h.gunBtns.atom.textContent = '1 ATOM: ' + C.PALETTE[this.elementIdx];
+      if (h.gunBtns.atom) h.gunBtns.atom.textContent = '5 ATOM: ' + C.PALETTE[this.elementIdx];
       h.modeBtn.textContent = G.C2C.MODES[this.c2cMode].label;
       h.modeBtn.classList.toggle('active', this.gun === 'c2c');
       h.chips.forEach((b, i) => b.classList.toggle('active', i === this.elementIdx));

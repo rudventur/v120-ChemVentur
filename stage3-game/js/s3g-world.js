@@ -314,7 +314,10 @@
           const hitR = a.r + p.r + 0.3;
           if (Math.abs(a.pos.x - p.pos.x) > hitR || Math.abs(a.pos.y - p.pos.y) > hitR || Math.abs(a.pos.z - p.pos.z) > hitR) continue;
           if (V.dist(a.pos, p.pos) < hitR) {
-            if (p.kind === 'dot') this.applyDot(p, a); else this.applyBlaster(p, a);
+            if (p.kind === 'dot') this.applyDot(p, a);
+            else if (p.kind === 'blaster') this.applyBlaster(p, a);
+            else if (G.GunRack) G.GunRack.apply(this, p, a);
+            else this.applyBlaster(p, a);
             this.removeProjectile(p);
             break;
           }
