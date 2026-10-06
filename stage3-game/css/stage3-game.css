@@ -52,7 +52,7 @@
 }
 .s3g-panel[hidden] { display: none; }
 .s3g-panel-title { font-size: 15px; margin-bottom: 8px; text-shadow: 0 0 8px var(--g); }
-.s3g-id { right: 12px; top: 56px; width: min(360px, 92vw); }
+.s3g-id { right: 12px; top: 56px; width: min(360px, 92vw); z-index: 2; }  /* above the FIRST DISCOVERY banner */
 .s3g-info { display: grid; grid-template-columns: max-content 1fr; gap: 3px 10px; margin: 0 0 8px; }
 .s3g-info dt { color: var(--g2); } .s3g-info dd { margin: 0; color: #d8ffe0; word-break: break-all; }
 .s3g-info a { color: var(--cy); }
@@ -83,12 +83,13 @@
 /* FIRST DISCOVERY banner (s3g-discovery.js) */
 .s3g-discovery {
   position: absolute; left: 50%; top: 18%; transform: translateX(-50%); text-align: center; pointer-events: none;
+  z-index: 1; box-sizing: border-box; max-width: min(40vw, 600px);   /* stays clear of the identify panel on wide screens */
   padding: 10px 26px; border: 2px solid var(--cy); border-radius: 10px; background: rgba(0, 20, 12, .55);
   box-shadow: 0 0 24px var(--cy), inset 0 0 18px rgba(0, 255, 255, .25); transition: opacity .15s linear;
 }
 .s3g-discovery[hidden] { display: none; }
 .s3g-discovery-kind { font-size: 12px; letter-spacing: 3px; color: var(--cy); }
-.s3g-discovery-name { font-size: 28px; font-weight: bold; color: #fff; text-shadow: 0 0 12px var(--g), 0 0 26px var(--cy); }
+.s3g-discovery-name { font-size: 24px; font-weight: bold; color: #fff; text-shadow: 0 0 12px var(--g), 0 0 26px var(--cy); }
 @media (max-width: 640px) { .s3g-discovery-name { font-size: 18px; } }
 
 /* BOTS (s3g-bots.js): name tag + speech bubble above each bot */
@@ -100,3 +101,6 @@
   color: var(--bot); background: rgba(0, 0, 0, .75); border: 1px solid var(--bot); border-radius: 6px;
 }
 .s3g-botmsg[hidden] { display: none; }
+
+/* Root page (index.html) puts a "Stages 0–2" link in the top-left corner: move the HUD title below it */
+#older ~ #s3g .s3g-tl { top: 44px; }

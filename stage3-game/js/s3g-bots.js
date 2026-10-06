@@ -191,6 +191,7 @@
       if (type === 'lover') {
         bot.hearts = [0, 1, 2].map(() => { const h = new T.Mesh(new T.SphereGeometry(0.35, 10, 8), new T.MeshBasicMaterial({ color: 0xff3388 })); grp.add(h); return h; });
       }
+      if (near) grp.scale.setScalar(0.6);       // Lover / Helper stay close to the ship: smaller, so they don't fill the view
       grp.position.set(pos.x, pos.y, pos.z);
       g.scene.add(grp);
       bot.mesh = grp; bot.ring = ring; bot.halo = halo;
