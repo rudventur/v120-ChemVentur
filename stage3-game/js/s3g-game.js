@@ -41,13 +41,14 @@
   }
 
   const GUNS = [
-    { id: 'proton', key: '1', label: 'p⁺' },
-    { id: 'neutron', key: '2', label: 'n' },
-    { id: 'electron', key: '3', label: 'e⁻' },
-    { id: 'rain', key: '4', label: 'RAIN' },
-    { id: 'atom', key: '5', label: 'ATOM' },
-    { id: 'shotgun', key: '6', label: 'SHOT' },
-    { id: 'c2c', key: '7', label: 'c2c' },
+    // key 5 is kept free for the planned "shotgun5"; the rain "gun" only toggles rain, so it lives on M
+    { id: 'proton', key: '1', label: 'p⁺ SHOT' },     // shotgun1proton (s3g-pne.js)
+    { id: 'neutron', key: '2', label: 'n SHOT' },     // SHOTGUN2neutron (s3g-pne.js)
+    { id: 'electron', key: '3', label: '⚡ ELECTRO' },  // Electrogun (s3g-pne.js)
+    { id: 'c2c', key: '4', label: 'c2c' },
+    { id: 'atom', key: '6', label: 'ATOM' },
+    { id: 'shotgun', key: '7', label: 'SHOT' },
+    { id: 'rain', key: 'M', label: 'RAIN' },
     { id: 'anti', key: '8', label: 'ANTI' },
     { id: 'grav', key: '9', label: 'GRAV' },
     { id: 'time', key: '0', label: 'TIME' }
@@ -100,6 +101,8 @@
       this._bindWorld();
       if (G.Discovery) G.Discovery.attach(this);
       if (G.Bots) G.Bots.attach(this);
+      if (G.PNE) G.PNE.attach(this);
+      if (G.Grid) G.Grid.attach(this);
       this._bindInput();
       this._spawnStartAtoms();
       this.booted = true;
@@ -115,7 +118,7 @@
       this.started = true;
       A.unlock();
       if (this.hud) this.hud.startOverlay.hidden = true;
-      this._status('🚀 Go! 1 p⁺ 2 n 3 e⁻ 4 RAIN 5 ATOM 6 SHOT 7 c2c 8 ANTI 9 GRAV 0 TIME · B = identify');
+      this._status('🚀 Go! 1 p⁺ shotgun 2 n shotgun 3 ⚡ electro 4 c2c 6 ATOM 7 SHOT 8 ANTI 9 GRAV 0 TIME · B = identify · G = grid');
     },
 
     pause() { this.paused = true; },
@@ -376,6 +379,7 @@
 
     _trigger() {
       if (this.gun === 'c2c') { this.fireC2C(); return; }
+      if (G.PNE && G.PNE.fire(this)) return;
       if (G.GunRack && G.GunRack.fire(this)) return;
       if (this.fireCooldown > 0) return;
       const nose = this._nose(), dir = this._aimDir();
@@ -561,6 +565,8 @@
         const sim = this.slow > 0 ? dt * 0.22 : dt;
         if (this.slow > 0) this.slow -= dt;
         if (G.GunRack) G.GunRack.tick(this, dt);
+        if (G.PNE) G.PNE.tick(this, dt);
+        if (G.Grid) G.Grid.tick(this, dt);
         W.step(sim, { shipPos: this.ship.position, shipRadius: 2.2 });
         if (G.Bots) G.Bots.update(dt);
         this.targetTimer -= dt;
@@ -569,6 +575,7 @@
       }
       if (G.Discovery) G.Discovery.update(dt);   // FIRST DISCOVERY banner timing (real time)
       this._syncMeshes();
+      if (G.Grid) G.Grid.render(this);           // charge markers / glow, temperature + pressure layers
       this.renderer.render(this.scene, this.camera);
       this.hudTimer -= dt;
       if (this.hudTimer <= 0) { this.hudTimer = 0.1; this._hudNow(); }
@@ -586,10 +593,10 @@
           if (c === 'Digit1') this.selectGun('proton');
           else if (c === 'Digit2') this.selectGun('neutron');
           else if (c === 'Digit3') this.selectGun('electron');
-          else if (c === 'Digit4') this.selectGun('rain');
-          else if (c === 'Digit5') this.selectGun('atom');
-          else if (c === 'Digit6') this.selectGun('shotgun');
-          else if (c === 'Digit7') this.selectGun('c2c');
+          else if (c === 'Digit4') this.selectGun('c2c');
+          // Digit5: reserved for the planned shotgun5
+          else if (c === 'Digit6') this.selectGun('atom');
+          else if (c === 'Digit7') this.selectGun('shotgun');
           else if (c === 'Digit8') this.selectGun('anti');
           else if (c === 'Digit9') this.selectGun('grav');
           else if (c === 'Digit0') this.selectGun('time');
@@ -602,6 +609,9 @@
           else if (c === 'KeyP') { this.paused ? this.resume() : this.pause(); this._status(this.paused ? '⏸ Paused' : '▶ Resumed'); }
           else if (c === 'KeyH') this.hud.help.hidden = !this.hud.help.hidden;
           else if (c === 'KeyJ' && G.Bots) G.Bots.toggleAll();
+          else if (c === 'KeyG' && G.Grid) G.Grid.togglePanel();
+          else if ((c === 'Equal' || c === 'NumpadAdd') && G.PNE) G.PNE.adjustPower(this.gun, +1);
+          else if ((c === 'Minus' || c === 'NumpadSubtract') && G.PNE) G.PNE.adjustPower(this.gun, -1);
           else if (c === 'KeyK' && G.Discovery) { if (e.shiftKey) G.Discovery.reset(); else G.Discovery.toggle(); }
           else if (c === 'Space' && this.gun === 'c2c') this.fireC2C();
           else if (c === 'Escape') { this.hud.idPanel.hidden = true; this.hud.help.hidden = true; }
@@ -628,13 +638,14 @@
         if (!this.started) this.start();
         setMouse(e);
         if (e.button === 0) { this.mouse.fireHeld = true; if (this.gun === 'c2c') this.fireC2C(); else this._trigger(); }
-        if (e.button === 2) { this.mouse.steer = true; this.mouse.lastX = e.clientX; this.mouse.lastY = e.clientY; }
+        if (e.button === 2) { this.mouse.steer = true; this.mouse.lastX = e.clientX; this.mouse.lastY = e.clientY; this.mouse.rDown = { t: performance.now(), moved: 0 }; }
         cvs.setPointerCapture(e.pointerId);
       });
       cvs.addEventListener('pointermove', (e) => {
         if (e.pointerType === 'touch') { this._touchMove(e); return; }
         setMouse(e);
         if (this.mouse.steer) {
+          if (this.mouse.rDown) this.mouse.rDown.moved += Math.abs(e.clientX - this.mouse.lastX) + Math.abs(e.clientY - this.mouse.lastY);
           this.yaw -= (e.clientX - this.mouse.lastX) * 0.004;
           this.pitch -= (e.clientY - this.mouse.lastY) * 0.004;
           this.mouse.lastX = e.clientX; this.mouse.lastY = e.clientY;
@@ -643,11 +654,20 @@
       const up = (e) => {
         if (e.pointerType === 'touch') { this._touchUp(e); return; }
         if (e.button === 0) this.mouse.fireHeld = false;
-        if (e.button === 2) this.mouse.steer = false;
+        if (e.button === 2) {
+          this.mouse.steer = false;
+          // a short right-CLICK (not a right-drag steer) cycles the pellets per shot of guns 1 and 2
+          const r = this.mouse.rDown; this.mouse.rDown = null;
+          if (r && r.moved < 6 && performance.now() - r.t < 400 && G.PNE) G.PNE.cycleMode(this.gun);
+        }
       };
       cvs.addEventListener('pointerup', up);
       cvs.addEventListener('pointercancel', up);
-      cvs.addEventListener('wheel', (e) => { e.preventDefault(); this.cycleElement(e.deltaY > 0 ? 1 : -1); }, { passive: false });
+      cvs.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        if (G.PNE && G.PNE.usesPellets(this.gun)) G.PNE.adjustPower(this.gun, e.deltaY < 0 ? +1 : -1);   // guns 1 and 2: wheel = power
+        else this.cycleElement(e.deltaY > 0 ? 1 : -1);
+      }, { passive: false });
     },
 
     // touch: left half = move joystick, right half = steer drag
@@ -726,8 +746,12 @@
       // help + start overlays
       const controls = [
         ['W A S D', 'fly forward / strafe / back'], ['R / F', 'up / down'], ['Arrows · right-drag', 'turn (yaw / pitch)'],
-        ['Mouse', 'aim (crosshair)'], ['Left click · Space', 'fire'], ['1–0', 'p⁺ n e⁻ RAIN ATOM SHOT c2c ANTI GRAV TIME'],
-        ['C', 'c2c 13 (chromatic) ⇄ c2c 8 (major)'], ['Z / X · wheel', 'atom element'], ['B', 'What did I build?'],
+        ['Mouse', 'aim (crosshair)'], ['Left click · Space', 'fire'],
+        ['1 · 2 · 3', 'shotgun1proton (red p⁺ mist) · SHOTGUN2neutron (blue n, falls slightly) · Electrogun (chain lightning, makes ions)'],
+        ['4 · 6 · 7', 'c2c tone gun · ATOM gun · atom SHOTgun (5 is kept free for shotgun5)'], ['8 · 9 · 0', 'ANTI · GRAV orb · TIME bubble'],
+        ['Right-click', 'guns 1 & 2: pellets per shot 1 · 3 · 7 · 15 · 31 (also the "x7" button)'],
+        ['Wheel · + / −', 'guns 1 & 2: power = range 15–90 (also the 💪 button); other guns: wheel = atom element'],
+        ['C', 'c2c 13 (chromatic) ⇄ c2c 8 (major)'], ['Z / X', 'atom element'], ['B', 'What did I build?'], ['G', 'Grid panel: charges · gravity · temperature · pressure'],
         ['T', 'swap in PubChem 3D conformer'], ['M', 'molecule rain on/off'], ['P', 'pause'], ['H', 'help'],
         ['K · Shift+K', 'FIRST DISCOVERY banners on/off · reset discoveries'],
         ['J', 'bots: spawn all 10 / remove all'],
@@ -778,7 +802,7 @@
       h.stats.textContent = 'SCORE ' + this.score + ' · ATOMS ' + W.atoms.length + ' · BONDS ' + W.bonds.length + ' · ' + this.fps + ' FPS';
       h.target.textContent = '🎯 BUILD: ' + t.name + ' ' + t.formula;
       Object.keys(h.gunBtns).forEach(id => h.gunBtns[id].classList.toggle('active', id === this.gun));
-      if (h.gunBtns.atom) h.gunBtns.atom.textContent = '5 ATOM: ' + C.PALETTE[this.elementIdx];
+      if (h.gunBtns.atom) h.gunBtns.atom.textContent = '6 ATOM: ' + C.PALETTE[this.elementIdx];
       h.modeBtn.textContent = G.C2C.MODES[this.c2cMode].label;
       h.modeBtn.classList.toggle('active', this.gun === 'c2c');
       h.chips.forEach((b, i) => b.classList.toggle('active', i === this.elementIdx));

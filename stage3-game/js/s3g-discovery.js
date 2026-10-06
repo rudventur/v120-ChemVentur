@@ -69,7 +69,7 @@
         this.discover('target:' + d.formula, 'Target built: ' + d.name + ' ' + d.formula, 'TARGET');
       } else if (type === 'identified' && !d.error && (d.cid || d.canonical)) {
         this.discover('mol:' + (d.cid ? 'cid' + d.cid : d.canonical), d.title || d.canonical, 'NEW MOLECULE' + (d.formula ? ' · ' + d.formula : ''));
-      } else if (type === 'botEvent' && d && d.key) {
+      } else if ((type === 'botEvent' || type === 'discover') && d && d.key) {   // 'discover': generic (guns 1–3)
         this.discover(d.key, d.name, d.kind || 'BOT');
       }
     },
