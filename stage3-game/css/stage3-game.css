@@ -28,6 +28,13 @@
 .s3g-btn:disabled { opacity: .4; cursor: not-allowed; }
 .s3g-mode { border-color: var(--cy); color: var(--cy); min-width: 64px; }
 .s3g-mode.active { background: var(--cy); color: var(--bg); box-shadow: 0 0 12px var(--cy); }
+/* guns 1–2 pellets / power buttons and the Grid panel (s3g-pne.js, s3g-grid.js) */
+.s3g-pellets { border-color: #ff4a4a; color: #ff8a8a; } .s3g-power { border-color: #ffb04a; color: #ffc98a; }
+.s3g-pellets[hidden], .s3g-power[hidden] { display: none; }
+.s3g-gridpanel { left: 12px; top: 92px; width: min(330px, 92vw); z-index: 2; }
+.s3g-gridopt { display: grid; grid-template-columns: auto 1fr; gap: 0 8px; align-items: center; margin: 0 0 8px; cursor: pointer; }
+.s3g-gridopt input { width: 16px; height: 16px; accent-color: #00ff41; grid-row: span 2; }
+.s3g-gridname { color: #d8ffe0; font-weight: bold; } .s3g-gridinfo { font-size: 10px; color: #9be89b; }
 .s3g-chip { --chip: #fff; border-color: var(--chip); color: var(--chip); min-width: 30px; padding: 3px 6px; }
 .s3g-chip.active { background: var(--chip); color: #000; box-shadow: 0 0 10px var(--chip); }
 .s3g-inv { font-size: 10px; color: #9be89b; }

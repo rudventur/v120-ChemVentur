@@ -50,8 +50,8 @@ const CHROMATIC = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], MAJOR = [0, 2, 4, 
     ok(times.every((t, i) => i === 0 || t > times[i - 1]), label + ': fired in sequence', times.join(',') + ' ms');
   }
 
-  // --- keyboard: gun 2 + C toggles label
-  await page.keyboard.press('Digit2');
+  // --- keyboard: gun 4 (c2c) + C toggles label
+  await page.keyboard.press('Digit4');
   const lbl1 = await page.$eval('.s3g-mode', b => b.textContent);
   await page.keyboard.press('KeyC');
   const lbl2 = await page.$eval('.s3g-mode', b => b.textContent);
@@ -66,8 +66,8 @@ const CHROMATIC = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], MAJOR = [0, 2, 4, 
   ok(dots >= 8, 'Space fires c2c dots (in flight)', 'dots=' + dots);
   await page.screenshot({ path: path.join(outDir, 'screenshot-c2c.png') });
 
-  // --- atom gun + flight
-  await page.keyboard.press('Digit1');
+  // --- atom gun (key 6) + flight
+  await page.keyboard.press('Digit6');
   const a0 = await page.evaluate(() => CHEMVENTUR.Stage3Game.debug.state().atoms);
   const z0 = await page.evaluate(() => CHEMVENTUR.Stage3Game.Game.ship.position.z);
   await page.keyboard.down('Space'); await page.keyboard.down('KeyW');
@@ -86,7 +86,7 @@ const CHROMATIC = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], MAJOR = [0, 2, 4, 
   await sleep(500);
   await page.screenshot({ path: path.join(outDir, 'screenshot-identify.png') });
 
-  // ===== FIRST DISCOVERY banners (no camera move, no slow motion) =====
+  // ===== FIRST DISCOVERY banners (no camera move; the brief slow-down added on main in d43c80e is kept) =====
   const disc = () => page.evaluate(() => CHEMVENTUR.Stage3Game.Discovery.debugState());
   await page.waitForFunction(() => { const D = CHEMVENTUR.Stage3Game.Discovery; return !D.active && !D.queue.length; }, { timeout: 30000 });
   await page.keyboard.down('ShiftLeft'); await page.keyboard.press('KeyK'); await page.keyboard.up('ShiftLeft');
@@ -115,8 +115,13 @@ const CHROMATIC = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], MAJOR = [0, 2, 4, 
   const rate = (timing.worldTime - ev.worldTime) / ((timing.t - ev.t) / 1000);
   const cd = await camToShip();
   ok(ds.active && ds.active.key === 'bond:1' && ds.bannerVisible && ds.bannerText === 'FIRST DISCOVERY: Single bond', 'first bond shows the banner', JSON.stringify({ banner: ds.bannerText, t: ds.active && ds.active.t }));
-  ok(rate > 0.8 && cd < 12, 'no slow motion and no camera close-up', 'game time rate ' + rate.toFixed(2) + 'x, camera to ship ' + cd.toFixed(1));
+  ok(rate < 0.6 && cd < 12, 'brief slow-down while the banner shows, no camera close-up', 'game time rate ' + rate.toFixed(2) + 'x, camera to ship ' + cd.toFixed(1));
   await page.waitForFunction(() => !CHEMVENTUR.Stage3Game.Discovery.active, { timeout: 8000 });
+  const r0 = await page.evaluate(() => ({ w: CHEMVENTUR.Stage3Game.World.time, t: performance.now() }));
+  await sleep(600);
+  const r1 = await page.evaluate(() => ({ w: CHEMVENTUR.Stage3Game.World.time, t: performance.now() }));
+  const rateAfter = (r1.w - r0.w) / ((r1.t - r0.t) / 1000);
+  ok(rateAfter > 0.8, 'normal game speed again after the banner', 'game time rate ' + rateAfter.toFixed(2) + 'x');
   ds = await disc();
   const ended = ds.log.find(l => l.key === 'bond:1');
   ok(ended && Math.abs(ended.ms - 2500) < 400 && !ds.bannerVisible, 'banner hides after ~2.5 s', 'ms=' + (ended && ended.ms));
