@@ -41,11 +41,12 @@
   }
 
   const GUNS = [
-    // key 5 is kept free for the planned "shotgun5"; the rain "gun" only toggles rain, so it lives on M
+    // the rain "gun" only toggles rain, so it lives on M
     { id: 'proton', key: '1', label: 'p⁺ SHOT' },     // shotgun1proton (s3g-pne.js)
     { id: 'neutron', key: '2', label: 'n SHOT' },     // SHOTGUN2neutron (s3g-pne.js)
     { id: 'electron', key: '3', label: '⚡ ELECTRO' },  // Electrogun (s3g-pne.js)
     { id: 'c2c', key: '4', label: 'c2c' },
+    { id: 'shotgun5', key: '5', label: '✳ MIX' },        // shotgun5: random mix of strings, p⁺, n, charges, light, sound (s3g-pne.js)
     { id: 'atom', key: '6', label: 'ATOM' },
     { id: 'shotgun', key: '7', label: 'SHOT' },
     { id: 'rain', key: 'M', label: 'RAIN' },
@@ -118,7 +119,7 @@
       this.started = true;
       A.unlock();
       if (this.hud) this.hud.startOverlay.hidden = true;
-      this._status('🚀 Go! 1 p⁺ shotgun 2 n shotgun 3 ⚡ electro 4 c2c 6 ATOM 7 SHOT 8 ANTI 9 GRAV 0 TIME · B = identify · G = grid');
+      this._status('🚀 Go! 1 p⁺ shotgun 2 n shotgun 3 ⚡ electro 4 c2c 5 mix 6 ATOM 7 SHOT 8 ANTI 9 GRAV 0 TIME · B = identify · G = grid');
     },
 
     pause() { this.paused = true; },
@@ -594,7 +595,7 @@
           else if (c === 'Digit2') this.selectGun('neutron');
           else if (c === 'Digit3') this.selectGun('electron');
           else if (c === 'Digit4') this.selectGun('c2c');
-          // Digit5: reserved for the planned shotgun5
+          else if (c === 'Digit5') this.selectGun('shotgun5');
           else if (c === 'Digit6') this.selectGun('atom');
           else if (c === 'Digit7') this.selectGun('shotgun');
           else if (c === 'Digit8') this.selectGun('anti');
@@ -665,7 +666,7 @@
       cvs.addEventListener('pointercancel', up);
       cvs.addEventListener('wheel', (e) => {
         e.preventDefault();
-        if (G.PNE && G.PNE.usesPellets(this.gun)) G.PNE.adjustPower(this.gun, e.deltaY < 0 ? +1 : -1);   // guns 1 and 2: wheel = power
+        if (G.PNE && G.PNE.hasPower(this.gun)) G.PNE.adjustPower(this.gun, e.deltaY < 0 ? +1 : -1);   // guns 1, 2, 5: power · Electrogun: volts
         else this.cycleElement(e.deltaY > 0 ? 1 : -1);
       }, { passive: false });
     },
@@ -748,9 +749,10 @@
         ['W A S D', 'fly forward / strafe / back'], ['R / F', 'up / down'], ['Arrows · right-drag', 'turn (yaw / pitch)'],
         ['Mouse', 'aim (crosshair)'], ['Left click · Space', 'fire'],
         ['1 · 2 · 3', 'shotgun1proton (red p⁺ mist) · SHOTGUN2neutron (blue n, falls slightly) · Electrogun (chain lightning, makes ions)'],
-        ['4 · 6 · 7', 'c2c tone gun · ATOM gun · atom SHOTgun (5 is kept free for shotgun5)'], ['8 · 9 · 0', 'ANTI · GRAV orb · TIME bubble'],
-        ['Right-click', 'guns 1 & 2: pellets per shot 1 · 3 · 7 · 15 · 31 (also the "x7" button)'],
-        ['Wheel · + / −', 'guns 1 & 2: power = range 15–90 (also the 💪 button); other guns: wheel = atom element'],
+        ['4 · 5', 'c2c tone gun · shotgun5 (random mix: strings, p⁺, n, charges, light, sound rings)'],
+        ['6 · 7', 'ATOM gun · atom SHOTgun'], ['8 · 9 · 0', 'ANTI · GRAV orb · TIME bubble'],
+        ['Right-click', 'guns 1, 2, 5: pellets per shot 1 · 3 · 7 · 15 · 31 (also the "x7" button) · Electrogun: amps = bolts 1 · 2 · 3 · 5 · 10 (⚡ button)'],
+        ['Wheel · + / −', 'guns 1, 2, 5: power = range 15–90 (💪 button) · Electrogun: volts 0 V → 1 TV (🔋 button) · other guns: wheel = atom element'],
         ['C', 'c2c 13 (chromatic) ⇄ c2c 8 (major)'], ['Z / X', 'atom element'], ['B', 'What did I build?'], ['G', 'Grid panel: charges · gravity · temperature · pressure'],
         ['T', 'swap in PubChem 3D conformer'], ['M', 'molecule rain on/off'], ['P', 'pause'], ['H', 'help'],
         ['K · Shift+K', 'FIRST DISCOVERY banners on/off · reset discoveries'],

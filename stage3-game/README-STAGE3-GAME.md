@@ -9,16 +9,17 @@ Plain vanilla JS with no build step, so it works on GitHub Pages. Namespace: `CH
 |---|---|
 | W/S or ↑/↓ | thrust forward / back |
 | A/D or ←/→ | strafe / turn |
-| Mouse | aim (crosshair) · **left-click** fire · **right-drag** steer · **right-click** = pellets per shot (guns 1 and 2) · wheel = power (guns 1 and 2) or element (other guns) |
+| Mouse | aim (crosshair) · **left-click** fire · **right-drag** steer · **right-click** = pellets per shot (guns 1, 2, 5) or amps (Electrogun) · wheel = power (guns 1, 2, 5), volts (Electrogun) or element (other guns) |
 | Space | fire current gun |
 | 1 | **shotgun1proton**: red proton mist |
 | 2 | **SHOTGUN2neutron**: blue neutron pellets that fall slightly |
-| 3 | **Electrogun**: chain lightning that turns atoms into ions |
+| 3 | **Electrogun**: chain lightning that turns atoms into ions; amps and volts settings |
 | 4 | c2c tone gun |
-| 5 | *free* (kept for the planned shotgun5) |
+| 5 | **shotgun5**: random mix of string squiggles, protons, neutrons, charges, light and sound rings |
 | 6 / 7 | ATOM gun / SHOT (atom-pellet shotgun) |
 | 8 / 9 / 0 | ANTI / GRAV orb / TIME bubble |
-| + / − (or wheel, or the 💪 button) | power (range) of guns 1 and 2 |
+| + / − (or wheel, or the 💪 / 🔋 button) | power (range) of guns 1, 2 and 5 · volts of the Electrogun |
+| Right-click (or the x7 / ⚡ button) | pellets per shot of guns 1, 2 and 5 · amps (number of bolts) of the Electrogun |
 | G (or ▦ Grid button) | Grid panel: charge display · gravity · temperature · pressure |
 | C | toggle c2c mode: `c2c 13` (chromatic) ↔ `c2c 8` (major) |
 | Z / X | previous / next element for the atom gun (H C N O F P S Cl Na Br) |
@@ -42,11 +43,11 @@ What counts as a discovery:
 - **New molecule** identified with B. It is keyed by PubChem CID (or canonical SMILES) and shows the PubChem name, e.g. `FIRST DISCOVERY: Ethanol`.
 - **New c2c note effect**, the first time it actually does something: bond / resonance / dissonance / harmony.
 - **Energy events:** first scooped atom, first c2c 13 / c2c 8 series, each target completed.
-- **Gun events:** first proton blast (gun 1), first neutron nucleus (gun 2: isotope or proton + neutron nucleus), first ion (gun 3).
+- **Gun events:** first proton blast (gun 1), first neutron nucleus (gun 2: isotope or proton + neutron nucleus), first ion (gun 3 or a shotgun5 charge dot), first bare nucleus (Electrogun at 1 GJ or more), first shotgun5 shot.
 
 Overlapping discoveries **queue** and show one banner at a time (up to 6 waiting, extras just show a status line). Discoveries are saved in localStorage under `cv.s3g.discoveries.v1` and the on/off setting under `cv.s3g.discoverybanners.v1`. With banners off, discoveries are still recorded and shown as a status line only. **K** toggles the banners and **Shift+K** resets all discoveries; from code, use `CHEMVENTUR.Stage3Game.Discovery.toggle()` / `.reset()`.
 
-## Guns 1, 2 and 3 (`js/s3g-pne.js`)
+## Guns 1, 2, 3 and 5 (`js/s3g-pne.js`)
 **shotgun1proton (key 1).** A mist of small red protons. All pellets of one shot fly parallel inside a beam that is **never wider than half the ship's width** (2.1 units; measured from the ship model). Right-click (or tap the `shotgun1proton x7` button) cycles the pellets per shot: **1 · 3 · 7 · 15 · 31** (beam width 0 · 25 · 50 · 75 · 100 % of half the ship's width). The right-click never opens the browser menu, and a right-*drag* still steers. Pellets are drawn with instanced meshes (4 draw calls for any number of pellets) and hit atoms through a spatial hash.
 What a proton does on hit:
 - pushes the atom a little and adds a little energy (visible as a red flash);
@@ -60,7 +61,38 @@ So neutrons form nuclei far more often than protons do (about 12 % against 2 % p
 
 **Power (range), guns 1 and 2.** Mouse wheel, + / − keys or the 💪 button (which wraps around). Five levels: range **15 · 30 · 50 · 70 · 90** units. The maximum is the arena radius (90), and a pellet is removed the moment it would leave the arena, so a shot never reaches beyond the game space. Pellets per shot and power are saved per gun in localStorage (`cv.s3g.pne.v1`).
 
-**Electrogun (key 3).** A flickering lightning bolt to the atom nearest the crosshair (within 45 units), which then **jumps up to 6 times** to the nearest not-yet-struck atom within 10 units. Every struck atom becomes an **ion**: atoms with electronegativity 2.6 or higher (N, O, F, Cl, Br, S, I, …) gain an electron (−1), the others lose one (+1), up to ±2; noble gases are left alone. Ions push each other apart (same sign) or pull together (opposite sign) within 14 units.
+**Electrogun (key 3).** A flickering lightning bolt to the atom nearest the crosshair, which then jumps to the nearest not-yet-struck atom within 10 units. Struck atoms become **ions**: atoms with electronegativity 2.6 or higher (N, O, F, Cl, Br, S, I, …) gain electrons (−), the others lose them (+); noble gases are left alone. Ions push each other apart (same sign) or pull together (opposite sign) within 14 units.
+
+**Electrogun electrics.** Two settings, saved in localStorage with the others:
+- **Amps** (right-click or the ⚡ button): **1 · 2 · 3 · 5 · 10**. In the game, amps = the number of simultaneous bolts (1 A per bolt). Each bolt starts on its own atom (the aiming cone widens a little with more bolts); a bolt with nothing to hit forks into empty space.
+- **Volts** (wheel, + / − or the 🔋 button), logarithmic steps. Volts set the reach and the number of jumps:
+
+| Volts | Real-world idea | Reach | Jumps |
+|---|---|---|---|
+| 0 V | off: no current flows, no bolt | 0 | 0 |
+| 1.5 V | AA battery | 8 | 0 |
+| 230 V | mains socket (UK / Europe) | 15 | 1 |
+| 10 kV | static spark | 25 | 2 |
+| 1 MV (default) | big Van de Graaff generator | 35 | 4 |
+| 100 MV | lightning | 45 | 6 |
+| 1 GV | upper end of lightning estimates | 60 | 8 |
+| 1 TV (10¹² V) | pulsar wind (approximate) | 90 (the arena radius) | 12 |
+
+- **Watts = volts × amps**, shown next to the buttons (W, kW, MW, GW, TW). Bolts get brighter and hotter in colour as watts climb: dull orange for a few watts, yellow, white, then blue-white and violet-white up at terawatts, with more glowing strands.
+- **Energy per strike, joules = watts × 0.3 s** (every strike lasts 0.3 s) picks the effect: under **10 J** a spark only (no ion) · **10 J to 1 MJ** makes ions · **1 MJ to 1 GJ** also breaks all the struck atom's bonds · **1 GJ and more** strips every electron (a bare nucleus, charge +Z, e.g. O⁸⁺).
+- **Charge per strike, coulombs = amps × 0.3 s** sets the ion charge size: under 0.9 C ±1 · from 0.9 C ±2 · from 2.5 C ±3. Charges of 2 or more get a bigger + / − marker in the Grid charge display.
+
+Examples: 230 V × 10 A = 2.3 kW, 690 J, 3 C → makes ions of charge 3 · 100 MV × 3 A = 300 MW, 90 MJ, 0.9 C → breaks bonds · 1 TV × 10 A = 10 TW, 3 TJ → strips electrons.
+
+The help panel (H) has an **electrics card** with well-known real figures: AA battery 1.5 V, car battery 12 V, mains 230 V (a 13 A plug fuse allows about 3 kW), a static shock of a few thousand volts, UK power lines up to 400 kV, lightning about 100 MV (estimates reach about 1 GV) with about 30 kA typical peak current, and a pulsar at about 10¹² V or more (approximate). The game's 0.3 s strike is much longer than a real lightning stroke (under a millisecond); it is a game convention, so energies are bigger than in reality.
+
+**shotgun5 (key 5).** The same pellets-per-shot modes, beam width limit and power (range) as guns 1 and 2, but every pellet is a random pick from a mix, so each shot is different:
+- **string squiggles** (violet, wriggling): a glimpse of the tiny string scale, like the Stage 0 strings; a hit makes the atom vibrate (energy);
+- **protons** (red) and **neutrons** (blue): exactly the gun 1 and gun 2 pellets, with the same hits (push, proton blast, neutron capture, nuclei);
+- **charge dots** (red + or blue −): give the atom they hit that charge (an ion, up to ±3);
+- **light dots**: bright, flickering, very fast (160 units/s, more than twice a proton) and short-lived; a hit excites the atom;
+- **sound**: a small expanding translucent ring, a pressure wave that nudges every atom it sweeps over; when the Grid **pressure** plates are on, each ring also sends a circular ripple across them.
+Rough mix: strings 24 %, protons 16 %, neutrons 16 %, charges 18 %, light 14 %, sound 12 %.
 
 Isotopes and ions are a game layer: "What did I build?" still identifies the neutral molecule.
 
@@ -109,13 +141,14 @@ js/s3g-audio.js            Web Audio (tones, blips)
 js/s3g-world.js            pure simulation: atoms, bonds, projectiles, physics
 js/s3g-game.js             three.js scene, input, HUD, guns, identify, rain, debug hook
 js/s3g-guns.js             the old gun rack as tunable guns (ATOM, SHOT, ANTI, GRAV, TIME, rain)
-js/s3g-pne.js              guns 1–3: shotgun1proton, SHOTGUN2neutron, Electrogun (pellets, power, hits, ions)
+js/s3g-pne.js              guns 1–3 and 5: shotgun1proton, SHOTGUN2neutron, Electrogun (amps, volts, watts), shotgun5
 js/s3g-grid.js             Grid panel: charge markers, gravity, temperature layers, pressure plates
 js/s3g-discovery.js        FIRST DISCOVERY banners (discovered set, queue, localStorage, K toggle)
 js/s3g-bots.js             10 bots in 3D (v118 Collector/Scientist/Chaos/Helper/Reporter/Peace/Homeless/Lover + Scraper, Produce)
 tests/s3g-headless.js      headless Chrome test (puppeteer-core)
 tests/s3g-bots-headless.js headless Chrome test for the bots
 tests/s3g-guns-headless.js headless Chrome test for guns 1–3 and the Grid panel
+tests/s3g-electrics-headless.js headless Chrome test for the Electrogun electrics and shotgun5
 screenshot-*.png
 ```
 CDNs (pinned): three.js `0.169.0` (jsDelivr, unpkg fallback) and RDKit.js `2025.3.4-1.0.0` (unpkg). Lookups use the PubChem PUG-REST API, and results are cached in localStorage under `cv.stage3.v1:`.
@@ -163,8 +196,17 @@ The test checks:
 - name tags render, J removes all bots, and there are no page errors
 - for `screenshot-bots.png`, the test lines the bots up in front of the ship
 
+`node tests/s3g-electrics-headless.js http://127.0.0.1:8877/ [screenshotDir]` runs the electrics and shotgun5 test:
+- Electrogun HUD (amps, volts, watts); volts steps 0 V … 1 TV with + / −, wheel and the 🔋 button; reach and jumps per step
+- right-click and the ⚡ button cycle amps; amps 1 · 2 · 3 · 5 · 10 give exactly that many bolts (also into empty space); 0 V gives none
+- watts readout = volts × amps for seven combinations, with joules and coulombs
+- effect tiers: spark (0.45 J), ions with charge size −1 / −2 / −3 by coulombs, bonds broken (30 MJ), bare nucleus O⁸⁺ (300 GJ), bigger markers, discoveries
+- bolt colour and brightness rise with watts; the help card has the real-world figures
+- shotgun5: key 5, HUD, right-click and power; pellet counts and beam width; every component appears across 30 shots and is drawn; range within the arena; charge, string and light effects; sound rings nudge atoms and ripple the pressure plates; first-shot banner; frame rate with x31 held; no page errors
+- screenshots `electro-amps.png` and `shotgun5.png`
+
 `node tests/s3g-guns-headless.js http://127.0.0.1:8877/ [screenshotDir]` runs the guns and Grid test:
-- key map (5 is free), rain on M, HUD labels such as `shotgun1proton x7`
+- key map (5 = shotgun5), rain on M, HUD labels such as `shotgun1proton x7`
 - right-click cycles pellets per shot with no browser menu; right-drag still steers; the HUD button cycles too
 - pellet counts 1 · 3 · 7 · 15 · 31 for both guns; beam never wider than half the ship's width, also in flight
 - power via + / −, wheel and button; every range within the arena; a full-power shot stops at 90 units and a shot outwards stops at the arena edge
