@@ -6,6 +6,20 @@
   <title>🚀 CHEMVENTUR · Stage 3 · 3D</title>
   <link rel="stylesheet" href="css/stage3-game.css">
   <style>html, body { margin: 0; height: 100%; background: #000a03; overflow: hidden; } #s3g { position: fixed; inset: 0; }</style>
+  <script src="https://rudventur.github.io/RudVentur.com/embed/rvView.js"></script>
+  <style>
+    /* v120: two corner toggles only (bottom-left keyboard + chat, bottom-right popcorn);
+       the notch menu and taskbar of the shared desk stay hidden so the game keeps the whole screen */
+    #rvd-notch, #rvd-taskbar { display: none !important; }
+    .rvd-corner { bottom: 12px !important; }
+    body { padding-bottom: 0 !important; }
+    /* always horizontal: phone held upright gets a rotate prompt */
+    #v120-rotate { display: none; position: fixed; inset: 0; z-index: 2000100; background: #000a03; color: #00ff41;
+      font: 18px/1.5 "Courier New", monospace; text-align: center; align-items: center; justify-content: center; flex-direction: column; }
+    #v120-rotate b { font-size: 64px; display: block; animation: v120spin 2s ease-in-out infinite; }
+    @keyframes v120spin { 0%,30% { transform: rotate(0) } 70%,100% { transform: rotate(-90deg) } }
+    @media (orientation: portrait) and (max-width: 900px) { #v120-rotate { display: flex; } }
+  </style>
 </head>
 <body>
   <div id="s3g"></div>
@@ -27,6 +41,27 @@
     CHEMVENTUR.Stage3Game.ready = CHEMVENTUR.Stage3Game.boot(document.getElementById('s3g'), {
       autostart: qs.has('autostart')
     }).then(g => { if (qs.has('bots') && CHEMVENTUR.Stage3Game.Bots) CHEMVENTUR.Stage3Game.Bots.spawnAll(); return g; });
+  </script>
+  <div id="v120-rotate"><b>&#128241;</b>Turn your phone sideways<br>ChemVentur v120 plays horizontal</div>
+  <script src="https://rudventur.github.io/RudVentur.com/embed/rvDesk.js" defer></script>
+  <script>
+    // v120 is always horizontal: lock landscape on the first tap (browsers need a real tap for full screen)
+    (function () {
+      function lockH() {
+        try {
+          if (window.rvView) rvView.apply('horizontal');
+          else {
+            (document.documentElement.requestFullscreen ? document.documentElement.requestFullscreen() : Promise.resolve())
+              .then(function () { return screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'); })
+              .catch(function () {});
+          }
+        } catch (e) {}
+      }
+      function first() { lockH(); setTimeout(lockH, 400); }
+      document.addEventListener('pointerdown', first, { once: true, capture: true });
+      document.addEventListener('fullscreenchange', function () { if (document.fullscreenElement) lockH(); });
+      try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(function () {}); } catch (e) {}
+    })();
   </script>
 </body>
 </html>
