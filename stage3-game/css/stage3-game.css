@@ -15,7 +15,7 @@
 .s3g-stats { font-size: 11px; color: #b8ffc9; margin-top: 3px; }
 .s3g-target { font-size: 13px; color: var(--cy); margin-top: 4px; text-shadow: 0 0 8px var(--cy); }
 
-.s3g-bl { position: absolute; left: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 6px; max-width: 70vw; }
+.s3g-bl { position: absolute; left: 12px; bottom: 72px; display: flex; flex-direction: column; gap: 6px; max-width: 70vw; }
 .s3g-guns, .s3g-palette, .s3g-actions, .s3g-row { display: flex; flex-wrap: wrap; gap: 5px; }
 .s3g-actions { position: absolute; top: 10px; right: 12px; justify-content: flex-end; max-width: 46vw; }
 
@@ -111,3 +111,25 @@
 
 /* Root page (index.html) puts a "Stages 0–2" link in the top-left corner: move the HUD title below it */
 #older ~ #s3g .s3g-tl { top: 44px; }
+
+/* v120 layout: guns are icon-only buttons in the bottom middle, between the two corner toggles
+   (⌨️ 💬 bottom-left, 🍿 bottom-right, added by the shared desk script) */
+.s3g-guns { position: absolute; left: 122px; right: 82px; bottom: 12px; justify-content: center; align-items: flex-end; gap: 5px; max-width: none; }
+.s3g-guns .s3g-gun, .s3g-guns .s3g-mode, .s3g-guns .s3g-pellets, .s3g-guns .s3g-power {
+  min-width: 0; width: 38px; height: 38px; padding: 0; font-size: 19px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+.s3g-guns .s3g-pellets, .s3g-guns .s3g-power { font-size: 12px; }
+.s3g-status { bottom: 66px; }
+.s3g-touchbar { bottom: 80px; }
+.s3g-start-help { max-width: 640px; margin-top: 4px; padding: 10px 14px; border: 1px solid var(--g2); border-radius: 8px;
+  background: rgba(0, 20, 8, .6); font-size: 12px; line-height: 1.5; color: #d8ffe0; text-align: left; }
+.s3g-start-row { display: flex; flex-direction: column; margin-bottom: 4px; }
+.s3g-start-row b { color: var(--cy); font-size: 12px; }
+.s3g-start-guns { display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 11px; color: #b8ffc9; }
+@media (max-height: 520px) {
+  .s3g-start { gap: 6px; padding: 8px; } .s3g-start-title { font-size: 24px; } .s3g-start-sub { font-size: 12px; }
+  .s3g-start-btn { font-size: 16px; padding: 8px 22px; } .s3g-start-help { font-size: 10px; padding: 6px 10px; }
+  .s3g-start-guns { font-size: 10px; }
+}
+@media (max-width: 640px) { .s3g-status { bottom: auto; top: 92px; } .s3g-guns { left: 112px; right: 72px; } }
+
+.s3g-guns .s3g-pellets[hidden], .s3g-guns .s3g-power[hidden] { display: none !important; }

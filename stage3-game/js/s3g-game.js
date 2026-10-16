@@ -42,16 +42,17 @@
 
   const GUNS = [
     // key 5 is kept free for the planned "shotgun5"; the rain "gun" only toggles rain, so it lives on M
-    { id: 'proton', key: '1', label: 'p⁺ SHOT' },     // shotgun1proton (s3g-pne.js)
-    { id: 'neutron', key: '2', label: 'n SHOT' },     // SHOTGUN2neutron (s3g-pne.js)
-    { id: 'electron', key: '3', label: '⚡ ELECTRO' },  // Electrogun (s3g-pne.js)
-    { id: 'c2c', key: '4', label: 'c2c' },
-    { id: 'atom', key: '6', label: 'ATOM' },
-    { id: 'shotgun', key: '7', label: 'SHOT' },
-    { id: 'rain', key: 'M', label: 'RAIN' },
-    { id: 'anti', key: '8', label: 'ANTI' },
-    { id: 'grav', key: '9', label: 'GRAV' },
-    { id: 'time', key: '0', label: 'TIME' }
+    // icon-only buttons in the HUD (name + key stay in the tooltip and on the START screen)
+    { id: 'proton', key: '1', label: 'p⁺ SHOT', icon: '🔴', info: 'proton shotgun' },     // shotgun1proton (s3g-pne.js)
+    { id: 'neutron', key: '2', label: 'n SHOT', icon: '⚪', info: 'neutron shotgun' },     // SHOTGUN2neutron (s3g-pne.js)
+    { id: 'electron', key: '3', label: '⚡ ELECTRO', icon: '⚡', info: 'electron gun' },  // Electrogun (s3g-pne.js)
+    { id: 'c2c', key: '4', label: 'c2c', icon: '🎵', info: 'c2c tone gun (notes bond / break atoms)' },
+    { id: 'atom', key: '6', label: 'ATOM', icon: '⚛️', info: 'atom gun (wheel = element)' },
+    { id: 'shotgun', key: '7', label: 'SHOT', icon: '💥', info: 'shotgun' },
+    { id: 'rain', key: 'M', label: 'RAIN', icon: '🌧️', info: 'rain on / off' },
+    { id: 'anti', key: '8', label: 'ANTI', icon: '🌀', info: 'anti gun' },
+    { id: 'grav', key: '9', label: 'GRAV', icon: '🌍', info: 'gravity gun' },
+    { id: 'time', key: '0', label: 'TIME', icon: '⏳', info: 'time slow gun' }
   ];
 
   const TARGETS = [
@@ -698,7 +699,7 @@
       h.guns = el('div', { className: 's3g-guns' });
       h.gunBtns = {};
       GUNS.forEach(g => {
-        const b = el('button', { type: 'button', className: 's3g-btn s3g-gun', text: g.key + ' ' + g.label });
+        const b = el('button', { type: 'button', className: 's3g-btn s3g-gun', text: g.icon, title: g.key + ' · ' + g.label + ' — ' + g.info });
         b.addEventListener('click', () => this.selectGun(g.id));
         h.gunBtns[g.id] = b;
         h.guns.appendChild(b);
@@ -767,7 +768,18 @@
       h.startOverlay = el('div', { className: 's3g-start' }, [
         el('div', { className: 's3g-start-title', text: '🚀 CHEMVENTUR · STAGE 3' }),
         el('div', { className: 's3g-start-sub', text: 'Fly. Shoot atoms. Bond them in 3D. Play the c2c tone gun. Ask PubChem what you built.' }),
-        startBtn, el('div', { className: 's3g-small', text: 'H = controls · sound starts after START' })
+        startBtn, el('div', { className: 's3g-small', text: 'H = controls · sound starts after START' }),
+        el('div', { className: 's3g-start-help' }, [
+          el('div', { className: 's3g-start-row' }, [
+            el('b', { text: 'Corner toggles' }),
+            el('span', { text: '⌨️ 💬 bottom-left: keyboards and global chat · 🍿 bottom-right: Popcorn Hub' })
+          ]),
+          el('div', { className: 's3g-start-row' }, [
+            el('b', { text: 'Guns (bottom middle, between the toggles)' }),
+            el('span', { text: 'tap an icon or press its number' })
+          ]),
+          el('div', { className: 's3g-start-guns' }, GUNS.map(g => el('span', { className: 's3g-start-gun', text: g.icon + ' ' + g.key + ' ' + g.info })))
+        ])
       ]);
 
       // touch buttons
@@ -787,7 +799,8 @@
 
       h.root = el('div', { className: 's3g-hud' }, [
         el('div', { className: 's3g-tl' }, [h.title, h.stats, h.target]),
-        el('div', { className: 's3g-bl' }, [h.guns, h.palette, h.inv]),
+        el('div', { className: 's3g-bl' }, [h.palette, h.inv]),
+        h.guns,
         h.actions, h.status, h.cross, h.idPanel, h.help, h.touchBar, h.startOverlay
       ]);
       this.container.appendChild(h.root);
@@ -802,8 +815,9 @@
       h.stats.textContent = 'SCORE ' + this.score + ' · ATOMS ' + W.atoms.length + ' · BONDS ' + W.bonds.length + ' · ' + this.fps + ' FPS';
       h.target.textContent = '🎯 BUILD: ' + t.name + ' ' + t.formula;
       Object.keys(h.gunBtns).forEach(id => h.gunBtns[id].classList.toggle('active', id === this.gun));
-      if (h.gunBtns.atom) h.gunBtns.atom.textContent = '6 ATOM: ' + C.PALETTE[this.elementIdx];
-      h.modeBtn.textContent = G.C2C.MODES[this.c2cMode].label;
+      if (h.gunBtns.atom) h.gunBtns.atom.title = '6 · ATOM: ' + C.PALETTE[this.elementIdx] + ' — atom gun (wheel = element)';
+      h.modeBtn.textContent = '🎹';
+      h.modeBtn.title = 'C: c2c mode — now ' + G.C2C.MODES[this.c2cMode].label + ' (tap to switch 13 / 8)';
       h.modeBtn.classList.toggle('active', this.gun === 'c2c');
       h.chips.forEach((b, i) => b.classList.toggle('active', i === this.elementIdx));
       const inv = Object.keys(W.inventory).map(k => k + '×' + W.inventory[k]).join(' ');
