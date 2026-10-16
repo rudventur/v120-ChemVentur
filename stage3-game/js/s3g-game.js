@@ -104,6 +104,7 @@
       if (G.Bots) G.Bots.attach(this);
       if (G.PNE) G.PNE.attach(this);
       if (G.Grid) G.Grid.attach(this);
+      if (G.Steering) G.Steering.attach(this);   // steering modes: Classic (default), Cessna, Gamepad; options window (O)
       this._bindInput();
       this._spawnStartAtoms();
       this.booted = true;
@@ -323,25 +324,29 @@
       return this._forward();
     },
 
+    // fallback only if js/s3g-steering.js is missing: the original keyboard / pad steering
+    _classicCommand() {
+      const k = this.keys, t = this.touch, n = (b) => (b ? 1 : 0);
+      const cmd = { attitude: 'euler', move: { x: n(k.has('KeyD')) - n(k.has('KeyA')), y: n(k.has('KeyR')) - n(k.has('KeyF')), z: n(k.has('KeyS')) - n(k.has('KeyW')) },
+        yawRate: n(k.has('ArrowRight')) - n(k.has('ArrowLeft')), pitchRate: n(k.has('ArrowUp')) - n(k.has('ArrowDown')), yawDelta: 0, pitchDelta: 0 };
+      if (t.pad) { cmd.yawRate += t.pad.x; cmd.pitchRate -= t.pad.y; }
+      if (t.steer) { cmd.yawDelta = t.steer.dx * 0.004; cmd.pitchDelta = -t.steer.dy * 0.004; t.steer.dx = t.steer.dy = 0; }
+      if (t.joy) { cmd.move.x += t.joy.x; cmd.move.z += t.joy.y; }
+      if (t.move) { cmd.move.x += t.move.x; cmd.move.z += t.move.y; }
+      return cmd;
+    },
+
     _updateShip(dt) {
-      const k = this.keys;
+      // all steering goes through one normalized command (see js/s3g-steering.js); Classic = the original behaviour
+      const S = G.Steering, cmd = S ? S.command(this, dt) : this._classicCommand();
+      if (cmd.attitude === 'quat') { S.fly(this, cmd, dt); return; }
       const turn = C.SHIP_TURN * dt;
-      if (k.has('ArrowLeft')) this.yaw += turn;
-      if (k.has('ArrowRight')) this.yaw -= turn;
-      if (k.has('ArrowUp')) this.pitch += turn;
-      if (k.has('ArrowDown')) this.pitch -= turn;
-      if (this.touch.pad) { this.yaw -= this.touch.pad.x * turn; this.pitch -= this.touch.pad.y * turn; }
-      if (this.touch.steer) { this.yaw -= this.touch.steer.dx * 0.004; this.pitch -= this.touch.steer.dy * 0.004; this.touch.steer.dx = this.touch.steer.dy = 0; }
+      this.yaw -= cmd.yawRate * turn + cmd.yawDelta;
+      this.pitch += cmd.pitchRate * turn + cmd.pitchDelta;
       this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch));
       this.ship.quaternion.setFromEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
 
-      const local = new THREE.Vector3(
-        (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0),
-        (k.has('KeyR') ? 1 : 0) - (k.has('KeyF') ? 1 : 0),
-        (k.has('KeyS') ? 1 : 0) - (k.has('KeyW') ? 1 : 0)
-      );
-      if (this.touch.joy) { local.x += this.touch.joy.x; local.z += this.touch.joy.y; }
-      if (this.touch.move) { local.x += this.touch.move.x; local.z += this.touch.move.y; }
+      const local = new THREE.Vector3(cmd.move.x, cmd.move.y, cmd.move.z);
       if (local.lengthSq() > 1) local.normalize();
       this.shipVel.add(local.applyQuaternion(this.ship.quaternion).multiplyScalar(C.SHIP_ACCEL * dt));
       this.shipVel.multiplyScalar(Math.exp(-1.1 * dt));
@@ -563,7 +568,7 @@
       if (!this.paused) {
         this._updateShip(dt);
         this.fireCooldown = Math.max(0, this.fireCooldown - dt);
-        if ((this.mouse.fireHeld || this.keys.has('Space') || this.touch.fire) && this.gun !== 'c2c') this._trigger();
+        if ((this.mouse.fireHeld || this.keys.has('Space') || this.touch.fire || (G.Steering && G.Steering.fireHeld)) && this.gun !== 'c2c') this._trigger();
         this._updateSeq(dt);
         const sim = this.slow > 0 ? dt * 0.22 : dt;
         if (this.slow > 0) this.slow -= dt;
@@ -617,7 +622,8 @@
           else if ((c === 'Minus' || c === 'NumpadSubtract') && G.PNE) G.PNE.adjustPower(this.gun, -1);
           else if (c === 'KeyK' && G.Discovery) { if (e.shiftKey) G.Discovery.reset(); else G.Discovery.toggle(); }
           else if (c === 'Space' && this.gun === 'c2c') this.fireC2C();
-          else if (c === 'Escape') { this.hud.idPanel.hidden = true; this.hud.help.hidden = true; }
+          else if (c === 'KeyO' && G.Steering) G.Steering.togglePanel();
+          else if (c === 'Escape') { this.hud.idPanel.hidden = true; this.hud.help.hidden = true; if (G.Steering) G.Steering.togglePanel(false); }
         }
         this.keys.add(c);
       };
@@ -832,7 +838,8 @@
         ['C', 'c2c 13 (chromatic) ⇄ c2c 8 (major)'], ['Z / X', 'atom element'], ['B', 'What did I build?'], ['G', 'Grid panel: charges · gravity · temperature · pressure'],
         ['T', 'swap in PubChem 3D conformer'], ['M', 'molecule rain on/off'], ['P', 'pause'], ['H', 'help'],
         ['K · Shift+K', 'FIRST DISCOVERY banners on/off · reset discoveries'],
-        ['J', 'bots: spawn all 10 / remove all'],
+        ['J', 'bots: spawn all 10 / remove all'], ['O · ⚙', 'steering options: mode (Classic · Cessna · Gamepad), sensitivity, assists, left-handed'],
+        ['Cessna mode', 'A/D aileron (roll) · W/S elevator (S = nose up) · Q/E rudder · R/F throttle (held); touch: right stick aileron + elevator, left stick rudder + throttle'],
         ['Touch', 'left: move · right: steer · buttons']
       ];
       const helpList = el('dl', { className: 's3g-help-list' });
