@@ -330,6 +330,7 @@
       if (k.has('ArrowRight')) this.yaw -= turn;
       if (k.has('ArrowUp')) this.pitch += turn;
       if (k.has('ArrowDown')) this.pitch -= turn;
+      if (this.touch.pad) { this.yaw -= this.touch.pad.x * turn; this.pitch -= this.touch.pad.y * turn; }
       if (this.touch.steer) { this.yaw -= this.touch.steer.dx * 0.004; this.pitch -= this.touch.steer.dy * 0.004; this.touch.steer.dx = this.touch.steer.dy = 0; }
       this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch));
       this.ship.quaternion.setFromEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
@@ -340,6 +341,7 @@
         (k.has('KeyS') ? 1 : 0) - (k.has('KeyW') ? 1 : 0)
       );
       if (this.touch.joy) { local.x += this.touch.joy.x; local.z += this.touch.joy.y; }
+      if (this.touch.move) { local.x += this.touch.move.x; local.z += this.touch.move.y; }
       if (local.lengthSq() > 1) local.normalize();
       this.shipVel.add(local.applyQuaternion(this.ship.quaternion).multiplyScalar(C.SHIP_ACCEL * dt));
       this.shipVel.multiplyScalar(Math.exp(-1.1 * dt));
@@ -677,7 +679,10 @@
       this.hud.root.classList.add('s3g-touch');
       if (!this.started) this.start();
       const r = this.renderer.domElement.getBoundingClientRect();
-      if (e.clientX - r.left < r.width * 0.45) this.touch.joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: 0, y: 0 };
+      const left = e.clientX - r.left < r.width * 0.45;
+      if (left && this.hud.root.classList.contains('s3g-hide-padL') === false && this.hud.root.querySelector('.s3g-pad-left')) return;
+      if (!left && this.hud.root.classList.contains('s3g-hide-padR') === false && this.hud.root.querySelector('.s3g-pad-right')) return;
+      if (left) this.touch.joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: 0, y: 0 };
       else this.touch.steer = { id: e.pointerId, lx: e.clientX, ly: e.clientY, dx: 0, dy: 0 };
     },
     _touchMove(e) {
@@ -690,6 +695,75 @@
       if (this.touch.steer && this.touch.steer.id === e.pointerId) this.touch.steer = null;
     },
 
+    // small toggle buttons that hide / show each HUD panel (remembered on this device;
+    // phones start with the busy panels hidden so the game stays clear)
+    // the shared desk script's corner buttons are hidden in v120; the top-right menu presses them
+    _deskClick(sel, i) {
+      const b = document.querySelectorAll(sel + ' .rvd-cbtn')[i];
+      if (b) b.click(); else this._status('That button is still loading, try again in a moment');
+    },
+
+    _buildPanelToggles(h) {
+      const KEY = 's3gHidePanels2';
+      const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) { this.touchMode = true; h.root.classList.add('s3g-touch'); }
+      let hidden;
+      try { hidden = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { hidden = null; }
+      // clean screen by default: only the guns (and the movement pads on touch screens) show
+      if (!hidden) hidden = { info: true, actions: true, bl: true, padL: !isTouch, padR: !isTouch };
+      const save = () => { try { localStorage.setItem(KEY, JSON.stringify(hidden)); } catch (e) { /* ignore */ } };
+      const mk = (pn) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 's3g-ptog ' + (pn.cls || ''); b.textContent = pn.icon; b.title = pn.title;
+        const apply = () => {
+          h.root.classList.toggle('s3g-hide-' + pn.id, !!hidden[pn.id]);
+          b.classList.toggle('off', !!hidden[pn.id]);
+          if (pn.id === 'padL' && hidden.padL) this.touch.move = null;
+          if (pn.id === 'padR' && hidden.padR) this.touch.pad = null;
+        };
+        b.addEventListener('click', () => { hidden[pn.id] = !hidden[pn.id]; save(); apply(); });
+        if (pn.box) pn.box.insertBefore(b, pn.box.firstChild); else h.root.appendChild(b);
+        apply();
+      };
+      [
+        { id: 'info',    icon: 'ℹ️', title: 'Show / hide score and target (top-left)', box: h.root.querySelector('.s3g-tl') },
+        { id: 'actions', icon: '☰',  title: 'Show / hide the top-right buttons', box: h.actions },
+        { id: 'bl',      icon: '🎨', title: 'Show / hide elements and collected atoms', box: h.root.querySelector('.s3g-bl') },
+        { id: 'guns',    icon: '🔫', title: 'Show / hide the gun icons (bottom middle)', box: h.guns },
+        { id: 'padL',    icon: '🕹️', title: 'Show / hide the move pad (W A S D, bottom-left)', cls: 's3g-ptog-bl' },
+        { id: 'padR',    icon: '🕹️', title: 'Show / hide the steer pad (arrows, bottom-right)', cls: 's3g-ptog-br' }
+      ].forEach(mk);
+    },
+
+    // round 360 touch pads: left = move (W A S D), right = steer (arrow keys)
+    _buildPad(side) {
+      const knob = el('div', { className: 's3g-pad-knob' });
+      const pad = el('div', { className: 's3g-pad s3g-pad-' + side }, [
+        el('div', { className: 's3g-pad-label', text: side === 'left' ? 'W A S D' : '← ↑ ↓ →' }), knob]);
+      let id = null;
+      const set = (e) => {
+        const r = pad.getBoundingClientRect(), R = r.width / 2;
+        let x = (e.clientX - (r.left + R)) / R, y = (e.clientY - (r.top + R)) / R;
+        const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; }
+        knob.style.transform = 'translate(' + (x * R * 0.55) + 'px,' + (y * R * 0.55) + 'px)';
+        this.touch[side === 'left' ? 'move' : 'pad'] = { x, y };
+      };
+      const end = (e) => {
+        if (e.pointerId !== id) return;
+        id = null; knob.style.transform = '';
+        this.touch[side === 'left' ? 'move' : 'pad'] = null;
+      };
+      pad.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); id = e.pointerId; try { pad.setPointerCapture(id); } catch (x) { /* ignore */ }
+        this.touchMode = true; this.hud.root.classList.add('s3g-touch');
+        if (!this.started) this.start();
+        set(e);
+      });
+      pad.addEventListener('pointermove', (e) => { if (e.pointerId === id) set(e); });
+      pad.addEventListener('pointerup', end); pad.addEventListener('pointercancel', end);
+      return pad;
+    },
+
     // ================= HUD =================
     _buildHud() {
       const h = {};
@@ -699,7 +773,7 @@
       h.guns = el('div', { className: 's3g-guns' });
       h.gunBtns = {};
       GUNS.forEach(g => {
-        const b = el('button', { type: 'button', className: 's3g-btn s3g-gun', text: g.key + ' ' + g.label });
+        const b = el('button', { type: 'button', className: 's3g-btn s3g-gun', text: g.icon, title: g.key + ' · ' + g.label + ' — ' + g.info });
         b.addEventListener('click', () => this.selectGun(g.id));
         h.gunBtns[g.id] = b;
         h.guns.appendChild(b);
@@ -725,7 +799,10 @@
         mkBtn('🌧️ Rain (M)', () => { this.rainOn = !this.rainOn; this._status('🌧️ Molecule rain ' + (this.rainOn ? 'ON' : 'OFF')); }),
         mkBtn('🤖 Bots (J)', () => { if (G.Bots) G.Bots.toggleAll(); }),
         mkBtn('🔊 Sound', (e) => { A.setMuted(!A.muted); e.target.textContent = A.muted ? '🔇 Sound' : '🔊 Sound'; }),
-        mkBtn('❔ Help (H)', () => { h.help.hidden = !h.help.hidden; })
+        mkBtn('❔ Help (H)', () => { h.help.hidden = !h.help.hidden; }),
+        mkBtn('⌨️', () => this._deskClick('#rvd-bl', 0), 'Keyboards'),
+        mkBtn('💬', () => this._deskClick('#rvd-bl', 1), 'Global chat'),
+        mkBtn('🍿', () => this._deskClick('#rvd-br', 0), 'Popcorn Hub')
       ]);
 
       // identify panel
@@ -769,7 +846,22 @@
       h.startOverlay = el('div', { className: 's3g-start' }, [
         el('div', { className: 's3g-start-title', text: '🚀 CHEMVENTUR · STAGE 3' }),
         el('div', { className: 's3g-start-sub', text: 'Fly. Shoot atoms. Bond them in 3D. Play the c2c tone gun. Ask PubChem what you built.' }),
-        startBtn, el('div', { className: 's3g-small', text: 'H = controls · sound starts after START' })
+        startBtn, el('div', { className: 's3g-small', text: 'H = controls · sound starts after START' }),
+        el('div', { className: 's3g-start-help' }, [
+          el('div', { className: 's3g-start-row' }, [
+            el('b', { text: 'Corner toggles (clean screen)' }),
+            el('span', { text: '🕹️ bottom-left: show / hide the move pad (W A S D) · 🕹️ bottom-right: show / hide the steer pad (arrows) · ℹ️ top-left: score and target · ☰ top-right: buttons, keyboards ⌨️, chat 💬 and Popcorn 🍿' })
+          ]),
+          el('div', { className: 's3g-start-row' }, [
+            el('b', { text: 'Guns (bottom middle, between the toggles)' }),
+            el('span', { text: 'tap an icon or press its number' })
+          ]),
+          el('div', { className: 's3g-start-row' }, [
+            el('b', { text: 'Hide panels' }),
+            el('span', { text: 'every small round button hides or shows its panel and is remembered: ℹ️ score · ☰ top buttons · 🎨 elements · 🔫 guns (bottom middle) · 🕹️ pads' })
+          ]),
+          el('div', { className: 's3g-start-guns' }, GUNS.map(g => el('span', { className: 's3g-start-gun', text: g.icon + ' ' + g.key + ' ' + g.info })))
+        ])
       ]);
 
       // touch buttons
@@ -788,12 +880,16 @@
       ]);
 
       h.root = el('div', { className: 's3g-hud' }, [
-        el('div', { className: 's3g-tl' }, [h.title, h.stats, h.target]),
-        el('div', { className: 's3g-bl' }, [h.guns, h.palette, h.inv]),
+        el('div', { className: 's3g-left' }, [
+          el('div', { className: 's3g-tl' }, [h.title, h.stats, h.target]),
+          el('div', { className: 's3g-bl' }, [h.palette, h.inv])
+        ]),
+        h.guns, this._buildPad('left'), this._buildPad('right'),
         h.actions, h.status, h.cross, h.idPanel, h.help, h.touchBar, h.startOverlay
       ]);
       this.container.appendChild(h.root);
       this.hud = h;
+      this._buildPanelToggles(h);
       this._hudNow();
     },
 
@@ -804,8 +900,9 @@
       h.stats.textContent = 'SCORE ' + this.score + ' · ATOMS ' + W.atoms.length + ' · BONDS ' + W.bonds.length + ' · ' + this.fps + ' FPS';
       h.target.textContent = '🎯 BUILD: ' + t.name + ' ' + t.formula;
       Object.keys(h.gunBtns).forEach(id => h.gunBtns[id].classList.toggle('active', id === this.gun));
-      if (h.gunBtns.atom) h.gunBtns.atom.textContent = '6 ATOM: ' + C.PALETTE[this.elementIdx];
-      h.modeBtn.textContent = G.C2C.MODES[this.c2cMode].label;
+      if (h.gunBtns.atom) h.gunBtns.atom.title = '6 · ATOM: ' + C.PALETTE[this.elementIdx] + ' — atom gun (wheel = element)';
+      h.modeBtn.textContent = '🎹';
+      h.modeBtn.title = 'C: c2c mode — now ' + G.C2C.MODES[this.c2cMode].label + ' (tap to switch 13 / 8)';
       h.modeBtn.classList.toggle('active', this.gun === 'c2c');
       h.chips.forEach((b, i) => b.classList.toggle('active', i === this.elementIdx));
       const inv = Object.keys(W.inventory).map(k => k + '×' + W.inventory[k]).join(' ');

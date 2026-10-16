@@ -350,16 +350,19 @@ CHEMVENTUR.Guns = {
       rainMolecules: { value: false, label: '🔬 PubChem Molecules' }
     }
   },
-  // Gun 5 = ATOM GUN + PubChem
+  // Gun 5 = STRING + ATOM SHOTGUN (v120)
   5: {
-    id: 5, name: '⚛️ Atom Gun', description: 'Periodic Table + PubChem molecules!',
-    special: null, color: '#00ff41',
+    id: 5, name: '🎻 String+Atom Shotgun', description: 'Random mix of strings and atoms!',
+    special: 'shotgun', color: '#ff8800',
     options: {
-      speed: { value: 10, min: 3, max: 20, label: 'Speed' },
-      ionize: { value: 0, min: -3, max: 3, label: 'Ion Charge' },
-      showTrail: { value: false, label: 'Show Trail' },
-      lastPubChem: { value: '', label: 'Last PubChem' }, // Stores last spawned
-      spawnMode: { value: 'element', options: ['element', 'last-pubchem', 'random-molecule'], label: 'Spawn Mode' }
+      pellets: { value: 12, min: 4, max: 30, label: 'Pellets' },
+      spreadMin: { value: 15, min: 5, max: 50, label: 'Min Spread°' },
+      spreadMax: { value: 70, min: 30, max: 140, label: 'Max Spread°' },
+      speedMin: { value: 6, min: 2, max: 15, label: 'Min Speed' },
+      speedMax: { value: 16, min: 8, max: 28, label: 'Max Speed' },
+      mixRatio: { value: 0.5, min: 0, max: 1, label: 'Strings↔Atoms (0=all strings, 1=all atoms)' },
+      includeOrganic: { value: true, label: '🧬 Prefer Organic Atoms' },
+      stringTypes: { value: 'mixed', options: ['mixed', 'bosonic', 'fermionic', 'random'], label: 'String Types' }
     }
   },
   // Gun 6 = SHOTGUN 🧬
@@ -382,44 +385,38 @@ CHEMVENTUR.Guns = {
       includeAntimatter: { value: false, label: '⚡ Include Antimatter' }
     }
   },
-  // Gun 7 = ELECTROGUN with MUSIC! 🎵
+  // Gun 7 = PURE ENERGIES (v120) - no matter
   7: {
-    id: 7, name: '🎵 ElectroGun', description: 'Musical electron beam!',
-    special: 'electrogun', color: '#00ffff',
-    options: {
-      width: { value: 5, min: 1, max: 20, label: 'Width' },
-      density: { value: 15, min: 5, max: 30, label: 'Density' },
-      speed: { value: 20, min: 10, max: 40, label: 'Speed' },
-      musicMode: { 
-        value: 'chromatic', 
-        options: ['chromatic', 'major', 'minor', 'pentatonic', 'blues'], 
-        label: '🎵 Scale' 
-      },
-      // Chromatic = 13 shots (all semitones)
-      // Major = 8 shots (T-T-S-T-T-T-S)
-      chromaticShots: { value: 13, min: 8, max: 13, label: 'Notes (8=scale, 13=chromatic)' },
-      soundEnabled: { value: true, label: '🔊 Sound ON' },
-      baseFrequency: { value: 261.63, min: 100, max: 1000, label: 'Base Hz (C4=261.63)' }
-    }
-  },
-  // Gun 8 = ANTI-GUN (Photon/Tachyon/Antimatter)
-  8: {
-    id: 8, name: '✨ Anti-Gun', description: 'Photon, Tachyon, Antimatter!',
-    special: 'antigun', color: '#ff00ff',
+    id: 7, name: '⚡ Energies Gun', description: 'Photons, tachyons, super-states only!',
+    special: 'energies', color: '#00ffff',
     options: {
       mode: { 
         value: 'photon', 
-        options: ['photon', 'tachyon', 'antimatter', 'neutrino', 'graviton'], 
-        label: 'Particle' 
+        options: ['photon', 'tachyon', 'superstate', 'graviton', 'neutrino-energy'], 
+        label: 'Energy Type' 
       },
-      speed: { value: 15, min: 5, max: 30, label: 'Speed' },
-      // Photon: bounces like pinball, reflects off everything
-      photonBounces: { value: 10, min: 1, max: 50, label: '🎱 Photon Bounces' },
-      // Tachyon: speeds up with each reflection, leaves fading trail
-      tachyonSpeedup: { value: 1.1, min: 1.0, max: 2.0, label: '⚡ Tachyon Speedup' },
-      tachyonTrailFade: { value: 1.0, min: 0.5, max: 3.0, label: '✨ Trail Duration (s)' },
-      // Antimatter: annihilates on contact!
-      antimatterYield: { value: 100, min: 10, max: 1000, label: '💥 Annihilation Energy' }
+      intensity: { value: 8, min: 1, max: 20, label: 'Intensity / Density' },
+      speed: { value: 25, min: 10, max: 50, label: 'Speed' },
+      spread: { value: 15, min: 0, max: 60, label: 'Spread°' },
+      colorShift: { value: true, label: '🌈 Spectral Shift' },
+      soundEnabled: { value: true, label: '🔊 Energy Tone' }
+    }
+  },
+  // Gun 8 = ANNIHILATOR (v120)
+  8: {
+    id: 8, name: '💥 Annihilator', description: 'Dark matter, uranium, antimatter annihilation!',
+    special: 'annihilator', color: '#ff0044',
+    options: {
+      mode: { 
+        value: 'antimatter', 
+        options: ['antimatter', 'darkmatter', 'uranium', 'positron-burst', 'pair-production'], 
+        label: 'Annihilation Mode' 
+      },
+      yield: { value: 150, min: 20, max: 2000, label: '💥 Energy Yield' },
+      radius: { value: 40, min: 15, max: 120, label: 'Blast Radius' },
+      speed: { value: 12, min: 4, max: 30, label: 'Projectile Speed' },
+      showUranium: { value: true, label: '☢️ Show Bloody Uranium Element' },
+      chainReaction: { value: false, label: '⛓️ Chain Reaction' }
     }
   },
   // Gun 9 = GRAVITY + SPEAKER

@@ -15,6 +15,27 @@
       font: 12px/1.2 Courier New, monospace; text-decoration: none;
     }
   </style>
+  <script src="https://rudventur.github.io/RudVentur.com/embed/rvView.js"></script>
+  <style>
+    /* v120: two corner toggles only (bottom-left keyboard + chat, bottom-right popcorn);
+       the notch menu and taskbar of the shared desk stay hidden so the game keeps the whole screen */
+    #rvd-notch, #rvd-taskbar { display: none !important; }
+    .rvd-corner { display: none !important; }
+    body { padding-bottom: 0 !important; }
+    /* always horizontal: phone held upright gets a rotate prompt */
+    #v120-rotate { display: none; position: fixed; inset: 0; z-index: 2000100; background: #000a03; color: #00ff41;
+      font: 18px/1.5 "Courier New", monospace; text-align: center; align-items: center; justify-content: center; flex-direction: column; }
+    #v120-rotate b { font-size: 64px; display: block; animation: v120spin 2s ease-in-out infinite; }
+    @media (max-width: 900px), (max-height: 500px) {
+      .rvd-cbtn { width: 34px !important; height: 34px !important; font-size: 16px !important; }
+      .rvd-cbtn.rvd-pb1 { width: 38px !important; height: 38px !important; font-size: 18px !important; }
+      .rvd-corner { bottom: 8px !important; left: 8px; gap: 4px !important; }
+      #rvd-br { right: 8px !important; left: auto; } #rvd-bl { left: 8px !important; }
+      #older { top: 4px !important; left: 4px !important; padding: 3px 6px !important; font-size: 10px !important; }
+    }
+    @keyframes v120spin { 0%,30% { transform: rotate(0) } 70%,100% { transform: rotate(-90deg) } }
+    @media (orientation: portrait) and (max-width: 900px) { #v120-rotate { display: flex; } }
+  </style>
 </head>
 <body>
   <a id="older" href="game-v118.html" data-rxplanation="Opens the older ChemVentur stages (0–2). The target file is live.">Stages 0–2</a>
@@ -38,6 +59,27 @@
       if (qs.has('bots') && CHEMVENTUR.Stage3Game.Bots) CHEMVENTUR.Stage3Game.Bots.spawnAll();
       return g;
     });
+  </script>
+  <div id="v120-rotate"><b>&#128241;</b>Turn your phone sideways<br>ChemVentur v120 plays horizontal</div>
+  <script src="https://rudventur.github.io/RudVentur.com/embed/rvDesk.js" defer></script>
+  <script>
+    // v120 is always horizontal: lock landscape on the first tap (browsers need a real tap for full screen)
+    (function () {
+      function lockH() {
+        try {
+          if (window.rvView) rvView.apply('horizontal');
+          else {
+            (document.documentElement.requestFullscreen ? document.documentElement.requestFullscreen() : Promise.resolve())
+              .then(function () { return screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'); })
+              .catch(function () {});
+          }
+        } catch (e) {}
+      }
+      function first() { lockH(); setTimeout(lockH, 400); }
+      document.addEventListener('pointerdown', first, { once: true, capture: true });
+      document.addEventListener('fullscreenchange', function () { if (document.fullscreenElement) lockH(); });
+      try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(function () {}); } catch (e) {}
+    })();
   </script>
 </body>
 </html>

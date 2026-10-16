@@ -21,7 +21,7 @@
 <script src="https://rudventur.github.io/RudVentur.com/embed/rvView.js"></script>
 </head>
 <body>
-<a href="./" style="position:fixed;z-index:100000;top:8px;right:8px;color:#00ff41;background:#000;border:1px solid #00ff41;padding:6px 10px;font:12px Courier New,monospace;text-decoration:none">v120 Stage 3</a>
+
 
   
   <!-- 📱 Panel drawer toggle + backdrop (phone-width screens only) -->
@@ -36,6 +36,8 @@
       <button class="btn small" onclick="CHEMVENTUR.UI.lockLandscape(true)">🔒 Lock Landscape</button>
       <button class="btn small" onclick="CHEMVENTUR.UI.unlockOrientation()">🔓 Unlock</button>
     </div>
+    <!-- Stage 3 link moved into left panel so it no longer covers the canvas -->
+<a href="./" id="stage3-link" style="display:block;margin:6px 0;text-align:center;color:#00ff41;background:#001100;border:1px solid #00ff41;padding:6px 10px;font:12px Courier New,monospace;text-decoration:none;border-radius:4px;">🧬 v120 Stage 3 (3D)</a>
     <div style="text-align:center;font-size:9px;color:#ff00ff;margin-bottom:8px;">
       🤖💬 Left Panel Taskbar Edition! 💬🤖
     </div>
@@ -109,10 +111,10 @@
           <button class="gun-btn" data-gun="2">2:n</button>
           <button class="gun-btn" data-gun="3">3:e⁻🎵</button>
           <button class="gun-btn" data-gun="4">4:☯Rain</button>
-          <button class="gun-btn active" data-gun="5">5:⚛Atom</button>
+          <button class="gun-btn active" data-gun="5">5:🎻Shot</button>
           <button class="gun-btn" data-gun="6">6:🧬Shot</button>
-          <button class="gun-btn" data-gun="7">7:🎵Beam</button>
-          <button class="gun-btn" data-gun="8">8:✨Anti</button>
+          <button class="gun-btn" data-gun="7">7:⚡Energy</button>
+          <button class="gun-btn" data-gun="8">8:☢️U</button>
           <button class="gun-btn" data-gun="9">9:🔮Grav</button>
           <button class="gun-btn" data-gun="0">0:⏰Time</button>
         </div>
@@ -243,7 +245,7 @@
   <div id="mobile-controls">
     <div id="mobile-gun-picker">
       <button id="mobile-gun-prev" class="mobile-ctrl-btn" title="Previous gun">‹</button>
-      <div id="mobile-gun-current" title="Long-press for gun options">⚛ Atom</div>
+      <div id="mobile-gun-current" title="Long-press for gun options">🎻 Shot</div>
       <button id="mobile-gun-next" class="mobile-ctrl-btn" title="Next gun">›</button>
     </div>
     <button id="mobile-fire-btn" title="Tap to fire, hold for rapid fire">🔫<br>FIRE</button>
