@@ -182,3 +182,7 @@
   .s3g-ptog-bl, .s3g-ptog-br { width: 30px; height: 30px; font-size: 14px; }
   .s3g-touchbar { right: 112px; bottom: 46px; }
 }
+
+/* time speed toggle: top middle */
+.s3g-timebtn { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); font-size: 11px; padding: 3px 9px; border-radius: 14px; }
+@media (max-width: 900px), (max-height: 500px) { .s3g-timebtn { font-size: 9px; padding: 2px 7px; border-width: 1px; } }
