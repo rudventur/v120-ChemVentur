@@ -133,3 +133,33 @@
 @media (max-width: 640px) { .s3g-status { bottom: auto; top: 92px; } .s3g-guns { left: 112px; right: 72px; } }
 
 .s3g-guns .s3g-pellets[hidden], .s3g-guns .s3g-power[hidden] { display: none !important; }
+
+/* panel toggles: a small button stays visible while its panel is hidden */
+.s3g-ptog { align-self: flex-start; width: 26px; height: 26px; padding: 0; font-size: 13px; line-height: 1; cursor: pointer; flex: none;
+  background: rgba(0, 34, 0, .85); border: 1px solid var(--g2); border-radius: 50%; color: var(--g); }
+.s3g-ptog.off { opacity: .55; border-style: dashed; }
+.s3g-tl .s3g-ptog { margin-bottom: 4px; display: block; }
+.s3g-actions .s3g-ptog { order: 99; }
+.s3g-hide-info .s3g-tl > :not(.s3g-ptog),
+.s3g-hide-actions .s3g-actions > :not(.s3g-ptog),
+.s3g-hide-bl .s3g-bl > :not(.s3g-ptog),
+.s3g-hide-guns .s3g-guns > :not(.s3g-ptog) { display: none !important; }
+.s3g-guns .s3g-ptog { width: 30px; height: 30px; align-self: flex-end; }
+
+/* phones: minimal HUD */
+@media (max-width: 900px), (max-height: 500px) {
+  .s3g-tl { top: 6px; left: 8px; } .s3g-title { font-size: 11px; letter-spacing: 0; } .s3g-stats { font-size: 8px; margin-top: 1px; } .s3g-target { font-size: 9px; margin-top: 1px; }
+  .s3g-actions { top: 6px; right: 8px; gap: 3px; max-width: 70vw; }
+  .s3g-actions .s3g-btn { font-size: 9px; padding: 2px 5px; border-width: 1px; }
+  .s3g-bl { left: 8px; bottom: 54px; gap: 3px; }
+  .s3g-chip { font-size: 9px; min-width: 22px; padding: 1px 3px; border-width: 1px; } .s3g-palette { gap: 3px; }
+  .s3g-inv { font-size: 8px; }
+  .s3g-guns { left: 76px; right: 56px; bottom: 8px; gap: 3px; }
+  .s3g-guns .s3g-gun, .s3g-guns .s3g-mode, .s3g-guns .s3g-pellets, .s3g-guns .s3g-power { width: 28px; height: 28px; font-size: 14px; border-width: 1px; }
+  .s3g-guns .s3g-pellets, .s3g-guns .s3g-power { font-size: 9px; }
+  .s3g-guns .s3g-ptog { width: 24px; height: 24px; font-size: 11px; }
+  .s3g-status { font-size: 9px; padding: 2px 6px; bottom: 44px; top: auto; max-width: 56vw; }
+  .s3g-touchbar { bottom: 62px; right: 6px; gap: 4px; } .s3g-tbtn { font-size: 10px; padding: 6px 7px; min-width: 44px; border-width: 1px; }
+  .s3g-start-title { font-size: 22px; } .s3g-start-sub { font-size: 11px; }
+  #older ~ #s3g .s3g-tl { top: 28px; }
+}

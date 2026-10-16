@@ -17,6 +17,13 @@
     #v120-rotate { display: none; position: fixed; inset: 0; z-index: 2000100; background: #000a03; color: #00ff41;
       font: 18px/1.5 "Courier New", monospace; text-align: center; align-items: center; justify-content: center; flex-direction: column; }
     #v120-rotate b { font-size: 64px; display: block; animation: v120spin 2s ease-in-out infinite; }
+    @media (max-width: 900px), (max-height: 500px) {
+      .rvd-cbtn { width: 34px !important; height: 34px !important; font-size: 16px !important; }
+      .rvd-cbtn.rvd-pb1 { width: 38px !important; height: 38px !important; font-size: 18px !important; }
+      .rvd-corner { bottom: 8px !important; left: 8px; gap: 4px !important; }
+      #rvd-br { right: 8px !important; left: auto; } #rvd-bl { left: 8px !important; }
+      #older { top: 4px !important; left: 4px !important; padding: 3px 6px !important; font-size: 10px !important; }
+    }
     @keyframes v120spin { 0%,30% { transform: rotate(0) } 70%,100% { transform: rotate(-90deg) } }
     @media (orientation: portrait) and (max-width: 900px) { #v120-rotate { display: flex; } }
   </style>

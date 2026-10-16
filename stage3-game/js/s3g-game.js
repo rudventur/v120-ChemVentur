@@ -690,6 +690,37 @@
       if (this.touch.steer && this.touch.steer.id === e.pointerId) this.touch.steer = null;
     },
 
+    // small toggle buttons that hide / show each HUD panel (remembered on this device;
+    // phones start with the busy panels hidden so the game stays clear)
+    _buildPanelToggles(h) {
+      const KEY = 's3gHidePanels';
+      const small = window.matchMedia && window.matchMedia('(max-width: 900px), (max-height: 500px)').matches;
+      let hidden;
+      try { hidden = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { hidden = null; }
+      if (!hidden) hidden = small ? { actions: true, bl: true } : {};
+      const PANELS = [
+        { id: 'info',    icon: 'ℹ️', title: 'Show / hide score and target', box: h.root.querySelector('.s3g-tl') },
+        { id: 'actions', icon: '☰',  title: 'Show / hide the top-right buttons', box: h.actions },
+        { id: 'bl',      icon: '🎨', title: 'Show / hide elements and collected atoms', box: h.root.querySelector('.s3g-bl') },
+        { id: 'guns',    icon: '🔫', title: 'Show / hide the gun icons', box: h.guns }
+      ];
+      PANELS.forEach(pn => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 's3g-ptog'; b.textContent = pn.icon; b.title = pn.title;
+        const apply = () => {
+          h.root.classList.toggle('s3g-hide-' + pn.id, !!hidden[pn.id]);
+          b.classList.toggle('off', !!hidden[pn.id]);
+        };
+        b.addEventListener('click', () => {
+          hidden[pn.id] = !hidden[pn.id];
+          try { localStorage.setItem(KEY, JSON.stringify(hidden)); } catch (e) { /* ignore */ }
+          apply();
+        });
+        pn.box.insertBefore(b, pn.box.firstChild);
+        apply();
+      });
+    },
+
     // ================= HUD =================
     _buildHud() {
       const h = {};
@@ -778,6 +809,10 @@
             el('b', { text: 'Guns (bottom middle, between the toggles)' }),
             el('span', { text: 'tap an icon or press its number' })
           ]),
+          el('div', { className: 's3g-start-row' }, [
+            el('b', { text: 'Hide panels' }),
+            el('span', { text: 'ℹ️ score · ☰ top buttons · 🎨 elements · 🔫 guns — tap a small round button to hide or show that panel' })
+          ]),
           el('div', { className: 's3g-start-guns' }, GUNS.map(g => el('span', { className: 's3g-start-gun', text: g.icon + ' ' + g.key + ' ' + g.info })))
         ])
       ]);
@@ -805,6 +840,7 @@
       ]);
       this.container.appendChild(h.root);
       this.hud = h;
+      this._buildPanelToggles(h);
       this._hudNow();
     },
 
