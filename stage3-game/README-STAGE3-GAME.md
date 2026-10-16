@@ -200,9 +200,20 @@ The test checks:
 
 `node tests/s3g-steering-headless.js http://127.0.0.1:8877/ [screenshotDir]` runs the steering test (155 checks): picker and defaults, persistence, Classic through the command object, Cessna keys, assist levels, soft turn-back, options window, multi-touch sticks on phone and tablet sizes in landscape and portrait (no overlap with the touch bar), left-handed swap, and a mocked `navigator.getGamepads`.
 
+## Keyboard layer and stage selector (`js/s3g-keys.js`, `js/s3g-stages.js`)
+- **One bindings table** for every action (flying, firing, guns, toggles). Keys are matched by `event.code`, the physical place of the key, so every layout works (Polish, German, French, Russian, Greek, Dvorak and so on). Defaults are exactly the old key map.
+- **Layout-aware names:** `navigator.keyboard.getLayoutMap()` where it exists (Chromium) shows the character printed on your own key; elsewhere the name is learned from your key presses; otherwise it is derived from the code. Help, gun hints and buttons all use these names.
+- **🔤 Keyboard options** (button top-left, or F2): click a key box, press the new key. Two keys per action. Escape cancels, Backspace clears. A key already in use shows who owns it and offers "Take it". Presets: W A S D, arrow keys, E S D F, I J K L, left-handed numpad. Reset all. Saved in `localStorage` as `cv.s3g.keys.v1`.
+- **The button only shows when a keyboard is detected**: a fine pointer with hover (mouse or trackpad), or the first real key press. A touch-only phone never sees it until a key is pressed. There is never an on-screen keyboard.
+- **Input hygiene:** hotkeys are ignored while Ctrl, Meta, AltGr or Alt are held, during IME composition and when the focus is in an input, textarea, select or editable element. Held keys are cleared when the window loses focus or the tab is hidden.
+- **Opening screen = options and stage selector:** Stage 3 (this game), Stages 0, 1 and 2 (link to the older `game-v118.html`), Stage 4 "coming soon", then the steering picker (Classic stays the default) and a link to the keyboard options.
+- Steering modes (Classic, Cessna, Gamepad) read their keys from the same table, so presets change how you fly in every mode.
+
+`node tests/s3g-keys-headless.js http://127.0.0.1:8877/stage3-game/ [outDir] [screenshotDir]` runs the keyboard and stage selector test (80 checks): defaults, rebinding, conflicts, presets, labels, guards, keyboard button visibility, no on-screen keyboard, stage selector, screenshots `keys-phone-start.png`, `keys-phone-window.png`, `keys-desktop-start.png`, `keys-desktop-window.png`.
+
 ## Caveats (it's a beginning)
 - No multiplayer (deliberately out of scope).
 - Bonds are simple springs with 1-3 repulsion. Geometry is approximate, not real VSEPR. The PubChem conformer swap shows real geometry.
 - Rain and identification need network access (PubChem, unpkg for RDKit). If RDKit is unavailable or can't parse the build, identification sends the molblock straight to PubChem. Without network, the rain falls back to random H/O atoms.
 - Browsers only allow sound after a user gesture (the START button handles this).
-- Tested in headless Chrome (SwiftShader), including emulated touch. Real phones, tablets and controllers have not been tried by hand yet.
+- Tested in headless Chrome (SwiftShader), including emulated touch. Real phones, tablets, controllers and non-Latin keyboards have not been tried by hand yet.
