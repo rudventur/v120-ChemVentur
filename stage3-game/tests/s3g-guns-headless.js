@@ -37,11 +37,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   // ===== key map =====
   const km = {};
-  for (const [k, want] of [['Digit1', 'proton'], ['Digit2', 'neutron'], ['Digit3', 'electron'], ['Digit4', 'c2c'], ['Digit6', 'atom'], ['Digit7', 'shotgun'], ['Digit8', 'anti'], ['Digit9', 'grav'], ['Digit0', 'time']]) {
+  for (const [k, want] of [['Digit1', 'proton'], ['Digit2', 'neutron'], ['Digit3', 'electron'], ['Digit4', 'c2c'], ['Digit5', 'shotgun5'], ['Digit6', 'atom'], ['Digit7', 'shotgun'], ['Digit8', 'anti'], ['Digit9', 'grav'], ['Digit0', 'time']]) {
     await page.keyboard.press(k); km[k] = await gun(); if (km[k] !== want) km.bad = (km.bad || '') + k + '=' + km[k] + ' ';
   }
-  await page.keyboard.press('Digit5'); const after5 = await gun();
-  ok(!km.bad && after5 === 'time', 'key map 1 proton · 2 neutron · 3 electro · 4 c2c · 6 atom · 7 shot · 8 anti · 9 grav · 0 time; 5 is free', km.bad || 'key 5 kept gun = ' + after5);
+  ok(!km.bad, 'key map 1 proton · 2 neutron · 3 electro · 4 c2c · 5 shotgun5 · 6 atom · 7 shot · 8 anti · 9 grav · 0 time', km.bad || 'all keys select their gun');
   const rain0 = await ev(() => CHEMVENTUR.Stage3Game.Game.rainOn); await page.keyboard.press('KeyM');
   const rain1 = await ev(() => CHEMVENTUR.Stage3Game.Game.rainOn); await page.keyboard.press('KeyM');
   const labels = await page.$$eval('.s3g-gun', bs => bs.map(b => b.textContent));
@@ -186,8 +185,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await sleep(400);
   st = await pne();
   ok(st.bolts === 0, 'bolt fades after a fraction of a second', 'bolts ' + st.bolts);
+  await ev(() => { CHEMVENTUR.Stage3Game.PNE.voltsIdx = 5; });          // 100 MV: 6 jumps (default 1 MV: 4 jumps)
   const b10 = await chain(['C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C']);
-  ok(b10.struck.length === 7 && b10.jumps === 6, 'chain is capped at 6 jumps (7 atoms struck of 10)', 'struck ' + b10.struck.length);
+  await ev(() => { CHEMVENTUR.Stage3Game.PNE.voltsIdx = 4; });
+  ok(b10.struck.length === 7 && b10.jumps === 6, 'at 100 MV the chain is capped at 6 jumps (7 atoms struck of 10)', 'struck ' + b10.struck.length);
   const far = await ev(() => { const G = CHEMVENTUR.Stage3Game, W = G.World, g = G.Game, n = g._nose(), f = g._forward();
     [...W.atoms].forEach(a => W.removeAtom(a));
     W.spawnAtom('O', { x: n.x + f.x * 15, y: n.y + f.y * 15, z: n.z + f.z * 15 }); W.spawnAtom('O', { x: n.x + f.x * 15 + 12, y: n.y + f.y * 15, z: n.z + f.z * 15 });

@@ -83,12 +83,13 @@
         x.beginPath(); x.moveTo(16, 32); x.lineTo(48, 32); if (sym === '+') { x.moveTo(32, 16); x.lineTo(32, 48); } x.stroke();
         return new T.CanvasTexture(c);
       };
-      const cloud = (sym, color) => {
+      const cloud = (sym, color, size) => {
         const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(new Float32Array(C.MAX_ATOMS * 3 + 30), 3)); g.setDrawRange(0, 0);
-        const p = new T.Points(g, new T.PointsMaterial({ size: 1.0, map: tex(sym, color), transparent: true, depthWrite: false, alphaTest: 0.05, sizeAttenuation: true }));
+        const p = new T.Points(g, new T.PointsMaterial({ size: size || 1.0, map: tex(sym, color), transparent: true, depthWrite: false, alphaTest: 0.05, sizeAttenuation: true }));
         p.frustumCulled = false; game.scene.add(p); return p;
       };
       this.plus = cloud('+', '#ff5a5a'); this.minus = cloud('−', '#5aa8ff');
+      this.plusBig = cloud('+', '#ff5a5a', 1.9); this.minusBig = cloud('−', '#5aa8ff', 1.9);   // charge 2 or more: bigger marker
       this._red = new T.Color('#ff2020'); this._blue = new T.Color('#2060ff');
       this._sync();
     },
@@ -112,7 +113,7 @@
       this.layers.forEach(l => { l.mesh.visible = l.label.visible = this.state.temperature; });
       this.plates.forEach(p => { p.mesh.visible = this.state.pressure; });
       if (this.pLabel) this.pLabel.visible = this.state.pressure;
-      if (this.plus) this.plus.visible = this.minus.visible = this.state.charge;
+      if (this.plus) this.plus.visible = this.minus.visible = this.plusBig.visible = this.minusBig.visible = this.state.charge;
     },
 
     _label(text, color) {
@@ -249,10 +250,20 @@
         }
       }
       if (this.state.pressure && this.plates.length) {
+        // shotgun5 sound rings ripple the plates: a circular wave around each ring, fading with its age
+        const rings = G.PNE ? G.PNE.pellets.filter(p => p.kind === 'sound') : [];
+        this.pulses = rings.length;
         for (const pl of this.plates) {
           pl.mesh.position.y = pl.side * this.gap / 2;
           const pos = pl.mesh.geometry.attributes.position;
-          for (let i = 0; i < pl.cur.length; i++) pos.array[i * 3 + 1] = -pl.side * pl.cur[i];   // dent towards the middle
+          for (let i = 0; i < pl.cur.length; i++) {
+            let w = 0;
+            if (rings.length) {
+              const vx = pos.array[i * 3], vz = pos.array[i * 3 + 2];
+              for (const p of rings) { const d = Math.hypot(vx - p.x, vz - p.z) - G.PNE.ringRadius(p) * 2.5; if (d < 6 && d > -6) w += 2.5 * Math.exp(-d * d / 4) * (1 - p.age / p.life); }
+            }
+            pos.array[i * 3 + 1] = -pl.side * (pl.cur[i] + w);   // dent towards the middle
+          }
           pos.needsUpdate = true;
         }
         this._setLabel(this.pLabel, 'P ≈ ' + Math.round(this.pressure) + ' kPa · gap ' + Math.round(this.gap));
@@ -276,8 +287,7 @@
     _charges(game, W) {
       this.qTimer -= 1;
       if (this.qTimer <= 0) { this.qTimer = 10; for (const a of W.atoms) a._q = this.chargeOf(a); }    // every 10 frames
-      const pp = this.plus.geometry.attributes.position.array, mp = this.minus.geometry.attributes.position.array;
-      let np = 0, nm = 0;
+      const clouds = [this.plus, this.minus, this.plusBig, this.minusBig], arrs = clouds.map(c => c.geometry.attributes.position.array), cnt = [0, 0, 0, 0];
       const cam = game.camera.position;
       for (const a of W.atoms) {
         const q = a._q || 0, m = a.mesh;
@@ -287,21 +297,20 @@
         for (const b of a.bonds) { const o = b.a === a ? b.b : b.a; dx += a.pos.x - o.pos.x; dy += a.pos.y - o.pos.y; dz += a.pos.z - o.pos.z; }
         if (!a.bonds.length || dx * dx + dy * dy + dz * dz < 1e-6) { dx = cam.x - a.pos.x; dy = cam.y - a.pos.y; dz = cam.z - a.pos.z; }
         const L = Math.hypot(dx, dy, dz) || 1, r = a.r * 1.02 + 0.35;
-        const arr = q > 0 ? pp : mp, o = (q > 0 ? np++ : nm++) * 3;
+        const ci = (q > 0 ? 0 : 1) + (Math.abs(q) >= 1.5 ? 2 : 0), arr = arrs[ci], o = cnt[ci]++ * 3;
         arr[o] = a.pos.x + dx / L * r; arr[o + 1] = a.pos.y + dy / L * r; arr[o + 2] = a.pos.z + dz / L * r;
         m.material.emissive.lerp(q > 0 ? this._red : this._blue, Math.min(0.45, Math.abs(q) * 0.9));   // very subtle tint
         m.material.emissiveIntensity += Math.min(0.35, Math.abs(q) * 0.5);
       }
-      this.plus.geometry.setDrawRange(0, np); this.minus.geometry.setDrawRange(0, nm);
-      this.plus.geometry.attributes.position.needsUpdate = true; this.minus.geometry.attributes.position.needsUpdate = true;
-      this.markerCount = { plus: np, minus: nm };
+      clouds.forEach((c, i) => { c.geometry.setDrawRange(0, cnt[i]); c.geometry.attributes.position.needsUpdate = true; });
+      this.markerCount = { plus: cnt[0] + cnt[2], minus: cnt[1] + cnt[3], big: cnt[2] + cnt[3] };
     },
 
     debugState() {
       return { state: { ...this.state }, panelOpen: !!(this.panel && !this.panel.hidden),
         layers: this.layers.map(l => ({ y: l.y, visible: l.mesh.visible, label: l.label.userData.text })),
         plates: this.plates.map(p => ({ visible: p.mesh.visible, y: p.mesh.position.y })), pressure: Math.round(this.pressure * 10) / 10, gap: Math.round(this.gap * 10) / 10,
-        pLabel: this.pLabel ? this.pLabel.userData.text : null, markers: this.markerCount || { plus: 0, minus: 0 }, markersVisible: !!(this.plus && this.plus.visible),
+        pLabel: this.pLabel ? this.pLabel.userData.text : null, markers: this.markerCount || { plus: 0, minus: 0, big: 0 }, pulses: this.pulses || 0, markersVisible: !!(this.plus && this.plus.visible),
         avgT: this.avgT.map(t => Math.round(t)) };
     }
   };
