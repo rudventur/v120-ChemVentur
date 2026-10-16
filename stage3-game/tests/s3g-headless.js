@@ -52,9 +52,13 @@ const CHROMATIC = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], MAJOR = [0, 2, 4, 
 
   // --- keyboard: gun 4 (c2c) + C toggles label
   await page.keyboard.press('Digit4');
-  const lbl1 = await page.$eval('.s3g-mode', b => b.textContent);
+  // the HUD button is icon-only since v120 (🎹); the current mode is in its title
+  const modeLbl = () => page.$eval('.s3g-mode', b => (b.title.match(/c2c (13|8)/) || [])[0]);
+  await sleep(200);
+  const lbl1 = await modeLbl();
   await page.keyboard.press('KeyC');
-  const lbl2 = await page.$eval('.s3g-mode', b => b.textContent);
+  await sleep(200);
+  const lbl2 = await modeLbl();
   await page.keyboard.press('KeyC');
   ok(lbl1 !== lbl2 && ['c2c 13', 'c2c 8'].includes(lbl1) && ['c2c 13', 'c2c 8'].includes(lbl2), 'C key toggles HUD label', lbl1 + ' -> ' + lbl2);
 

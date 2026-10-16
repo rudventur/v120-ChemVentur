@@ -44,8 +44,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok(!km.bad && after5 === 'time', 'key map 1 proton · 2 neutron · 3 electro · 4 c2c · 6 atom · 7 shot · 8 anti · 9 grav · 0 time; 5 is free', km.bad || 'key 5 kept gun = ' + after5);
   const rain0 = await ev(() => CHEMVENTUR.Stage3Game.Game.rainOn); await page.keyboard.press('KeyM');
   const rain1 = await ev(() => CHEMVENTUR.Stage3Game.Game.rainOn); await page.keyboard.press('KeyM');
-  const labels = await page.$$eval('.s3g-gun', bs => bs.map(b => b.textContent));
-  ok(rain0 !== rain1 && labels.some(l => l.startsWith('M RAIN')) && labels.some(l => l.startsWith('1 p⁺')) && labels.some(l => l.startsWith('3 ⚡')), 'rain on M (HUD button kept), gun buttons relabelled', labels.join(' | '));
+  const labels = await page.$$eval('.s3g-gun', bs => bs.map(b => b.title));   // icon-only buttons since v120: the key + name are in the title
+  ok(rain0 !== rain1 && labels.some(l => l.startsWith('M · RAIN')) && labels.some(l => l.startsWith('1 · p⁺')) && labels.some(l => l.startsWith('3 · ⚡')), 'rain on M (HUD button kept), gun buttons relabelled', labels.join(' | '));
 
   // ===== gun 1: HUD label, right-click cycle, no context menu =====
   await page.keyboard.press('Digit1'); await sleep(150);
