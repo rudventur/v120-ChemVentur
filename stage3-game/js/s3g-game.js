@@ -47,7 +47,7 @@
     { id: 'neutron', key: '2', label: 'n SHOT', icon: '⚪', info: 'neutron shotgun' },     // SHOTGUN2neutron (s3g-pne.js)
     { id: 'electron', key: '3', label: '⚡ ELECTRO', icon: '⚡', info: 'electron gun' },  // Electrogun (s3g-pne.js)
     { id: 'c2c', key: '4', label: 'c2c', icon: '🎵', info: 'c2c tone gun (notes bond / break atoms)' },
-    { id: 'chaos', key: '5', label: 'CHAOS', icon: '🎲', info: 'chaos shotgun: random parts from every stage. Small ones do nothing, rare ones open a black hole or a quantum tunnel (more often through gravity orbs, time bubbles and reversed time)' },
+    { id: 'chaos', key: '5', label: 'CHAOS', icon: '🎲', info: 'chaos shotgun: random parts from stages 0 to 3 (strings, anti-strings, protons, neutrons, electrons, atoms, molecules, gravity orbs, single notes). Small ones do little, rare ones open a black hole or quantum tunnel, some cause reality glitches' },
     { id: 'atom', key: '6', label: 'ATOM', icon: '⚛️', info: 'atom gun (wheel = element)' },
     { id: 'shotgun', key: '7', label: 'SHOT', icon: '💥', info: 'shotgun' },
     { id: 'rain', key: 'M', label: 'RAIN', icon: '🌧️', info: 'rain on / off' },
@@ -416,6 +416,7 @@
     },
 
     _trigger() {
+      if (G.Chaos && this.fireCooldown <= 0 && !this.seq) G.Chaos.coincidence(this);   // supercoincidence: any gun, sometimes
       if (this.gun === 'c2c') { this.fireC2C(); return; }
       if (G.PNE && G.PNE.fire(this)) return;
       if (G.Chaos && G.Chaos.fire(this)) return;
