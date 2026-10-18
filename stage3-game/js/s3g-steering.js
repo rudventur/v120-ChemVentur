@@ -428,7 +428,7 @@
     togglePanel(show) {
       const p = this.panel; if (!p) return false;
       p.hidden = show == null ? !p.hidden : !show;
-      if (!p.hidden) { this._syncPanel(); }
+      if (!p.hidden) { if (G.Keys && G.Keys.panel && !G.Keys.panel.hidden) G.Keys.toggle(false); this._syncPanel(); }
       return !p.hidden;
     },
 
@@ -471,9 +471,9 @@
   Steering.register('classic', {
     label: 'Classic', icon: '🕹️', hint: 'W A S D + R F fly, arrows or right-drag turn; touch: move pad + steer pad.',
     read(game, dt, o) {
-      const k = game.keys, t = game.touch, inv = o.invertPitch ? -1 : 1, s = o.sens;
-      const cmd = { attitude: 'euler', move: { x: num(k.has('KeyD')) - num(k.has('KeyA')), y: num(k.has('KeyR')) - num(k.has('KeyF')), z: num(k.has('KeyS')) - num(k.has('KeyW')) },
-        yawRate: num(k.has('ArrowRight')) - num(k.has('ArrowLeft')), pitchRate: num(k.has('ArrowUp')) - num(k.has('ArrowDown')), rollRate: 0, yawDelta: 0, pitchDelta: 0, throttle: null };
+      const h = (id) => game.held(id), t = game.touch, inv = o.invertPitch ? -1 : 1, s = o.sens;   // key names come from the bindings table (js/s3g-keys.js)
+      const cmd = { attitude: 'euler', move: { x: num(h('moveRight')) - num(h('moveLeft')), y: num(h('moveUp')) - num(h('moveDown')), z: num(h('moveBack')) - num(h('moveForward')) },
+        yawRate: num(h('turnRight')) - num(h('turnLeft')), pitchRate: num(h('pitchUp')) - num(h('pitchDown')), rollRate: 0, yawDelta: 0, pitchDelta: 0, throttle: null };
       if (t.pad) { cmd.yawRate += t.pad.x; cmd.pitchRate -= t.pad.y; }
       if (t.steer) { cmd.yawDelta = t.steer.dx * 0.004; cmd.pitchDelta = -t.steer.dy * 0.004; t.steer.dx = t.steer.dy = 0; }
       if (t.joy) { cmd.move.x += t.joy.x; cmd.move.z += t.joy.y; }
@@ -487,15 +487,15 @@
     label: 'Cessna', icon: '✈️', flight: true,
     hint: 'A/D aileron (roll) · W/S elevator (pitch, S = pull up) · Q/E rudder · R/F throttle (held). Touch: right stick aileron + elevator, left stick rudder + throttle.',
     read(game, dt, o) {
-      const S = Steering, f = S.flight, k = game.keys, kb = f.kb, inv = o.invertPitch ? -1 : 1;
-      const tgt = { roll: num(k.has('KeyD') || k.has('ArrowRight')) - num(k.has('KeyA') || k.has('ArrowLeft')),
-        pitch: num(k.has('KeyS') || k.has('ArrowDown')) - num(k.has('KeyW') || k.has('ArrowUp')),
-        yaw: num(k.has('KeyE')) - num(k.has('KeyQ')) };
+      const S = Steering, f = S.flight, h = (id) => game.held(id), kb = f.kb, inv = o.invertPitch ? -1 : 1;
+      const tgt = { roll: num(h('moveRight') || h('turnRight')) - num(h('moveLeft') || h('turnLeft')),
+        pitch: num(h('moveBack') || h('pitchDown')) - num(h('moveForward') || h('pitchUp')),
+        yaw: num(h('rudderRight')) - num(h('rudderLeft')) };
       Object.keys(tgt).forEach(a => { const r = (tgt[a] === 0 ? 10 : 5) * dt; kb[a] += clamp(tgt[a] - kb[a], -r, r); });   // keys ramp in and out
       S._easeSticks(dt);
       const L = S.stick.L, R = S.stick.R, dz = o.deadzone, ex = o.expo;
       let roll = kb.roll + shape(R.x, dz, ex), pitch = kb.pitch + shape(R.y, dz, ex), yaw = kb.yaw + shape(L.x, dz, ex);
-      let thr = num(k.has('KeyR')) - num(k.has('KeyF'));
+      let thr = num(h('moveUp')) - num(h('moveDown'));
       thr = thr * FLIGHT.throttleRate - shape(L.y, dz, ex) * FLIGHT.stickThrottleRate;
       const p = S.pad;
       if (p) {
