@@ -38,13 +38,14 @@ New **Upgrades tab** in the Garage! Upgrade:
 
 ---
 
-## 🎮 MULTIPLAYER ROADMAP
+## 🎮 MULTIPLAYER
 
-**Coming soon!** We're setting up Firebase for:
-- See other players' ships in real-time
-- Co-op uranium building
-- Compete for fastest builds
-- Trade atoms and resources
+**Live** on Firebase (project `chemventurmulti117`, `js/multiplayer-v117.js`):
+- Create a room and share its code, or join one with a code
+- See other players' ships move in real time
+- Who is in the room, with a heartbeat that clears players who left
+
+Not built yet: co-op uranium building, build races, and trading atoms and resources.
 
 **Free hosting on GitHub Pages + Firebase!**
 
