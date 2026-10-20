@@ -54,6 +54,7 @@
   <script src="stage3-game/js/s3g-chaos.js"></script>
   <script src="stage3-game/js/s3g-steering.js"></script>
   <script src="stage3-game/js/s3g-stages.js"></script>
+  <script src="stage3-game/js/s3g-net.js"></script>
   <script src="rxplanation.js"></script>
   <script>
     const qs = new URLSearchParams(location.search);
@@ -65,6 +66,8 @@
     });
   </script>
   <div id="v120-rotate"><b>&#128241;</b>Turn your phone sideways<br>ChemVentur v120 plays horizontal</div>
+  <!-- the capital R (useRbox) from RudVentur.com: profile, rooms; the Stage 3 multiplayer preview talks to it (js/s3g-net.js) -->
+  <script src="https://rudventur.github.io/RudVentur.com/embed/useRbox.js" defer></script>
   <script src="https://rudventur.github.io/RudVentur.com/embed/rvDesk.js" defer></script>
   <script>
     // v120 is always horizontal: lock landscape on the first tap (browsers need a real tap for full screen)
