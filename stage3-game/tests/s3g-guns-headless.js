@@ -185,8 +185,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await sleep(400);
   st = await pne();
   ok(st.bolts === 0, 'bolt fades after a fraction of a second', 'bolts ' + st.bolts);
+  await ev(() => { CHEMVENTUR.Stage3Game.PNE.voltsIdx = 5; });          // 100 MV: 6 jumps (default 1 MV: 4 jumps)
   const b10 = await chain(['C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C']);
-  ok(b10.struck.length === 7 && b10.jumps === 6, 'chain is capped at 6 jumps (7 atoms struck of 10)', 'struck ' + b10.struck.length);
+  await ev(() => { CHEMVENTUR.Stage3Game.PNE.voltsIdx = 4; });
+  ok(b10.struck.length === 7 && b10.jumps === 6, 'at 100 MV the chain is capped at 6 jumps (7 atoms struck of 10)', 'struck ' + b10.struck.length);
   const far = await ev(() => { const G = CHEMVENTUR.Stage3Game, W = G.World, g = G.Game, n = g._nose(), f = g._forward();
     [...W.atoms].forEach(a => W.removeAtom(a));
     W.spawnAtom('O', { x: n.x + f.x * 15, y: n.y + f.y * 15, z: n.z + f.z * 15 }); W.spawnAtom('O', { x: n.x + f.x * 15 + 12, y: n.y + f.y * 15, z: n.z + f.z * 15 });
