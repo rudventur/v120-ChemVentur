@@ -109,6 +109,7 @@
       this.onPeers((list) => this._syncGhosts(list));
       this.onState((id, s) => { const gh = this.ghosts.get(id); if (gh) { gh.mesh.position.set(s.x, s.y, s.z); gh.mesh.rotation.set(s.pitch, s.yaw, s.roll, 'YXZ'); gh.live = true; } });
       this._addOption();
+      this._addRboxButton();
       this._watchRbox();
       if (this.enabled) this._whenAvailable(() => this.join(ROOM));
     },
@@ -128,6 +129,25 @@
       const row = document.createElement('div'); row.className = 's3g-optrow s3g-netrow'; row.append(name, ctl, info);
       S.panel.insertBefore(row, S.panel.lastChild);
       this.optInput = inp;
+    },
+
+    // a 👤 useRbox entry in the top-right button row (the ☰ roll-out): opens the RudVentur.com useRbox
+    openRbox() {
+      const box = document.getElementById('useRbox');
+      if (!box) return false;
+      box.classList.remove('hidden', 'collapsed');
+      return true;
+    },
+    _addRboxButton() {
+      const h = this.game && this.game.hud; if (!h || !h.actions) return;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 's3g-btn s3g-rboxbtn'; b.textContent = '👤 useRbox';
+      b.title = 'Open the useRbox: profile, rooms, restaurants (RudVentur.com)'; b.hidden = true;
+      b.addEventListener('click', () => this.openRbox());
+      const help = h.actionBtns && h.actionBtns.help;
+      h.actions.insertBefore(b, help && help.parentNode === h.actions ? help : null);
+      this.rboxBtn = b;
+      const show = () => { b.hidden = !document.getElementById('useRbox'); if (b.hidden) setTimeout(show, 500); };
+      show();
     },
 
     // simple ghost ships: translucent cones; parked in a ring until real ship states arrive

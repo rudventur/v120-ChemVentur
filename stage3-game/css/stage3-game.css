@@ -304,11 +304,11 @@
    CAPITAL R (useRbox from RudVentur.com) + multiplayer preview (js/s3g-net.js)
    the R sits top-right (58px at 14px); the game's top-right cluster moves left of it
    ============================================ */
-.s3g-has-rbox .s3g-actions { right: 82px; max-width: calc(46vw - 70px); }
+.s3g-has-rbox .s3g-actions { top: 82px; right: 12px; }   /* below the R and its rolling icons, never under them */
 @media (max-width: 900px), (max-height: 500px) {
   .s3g-has-rbox #topRightUser { top: 6px; right: 6px; }
   .s3g-has-rbox #topRightUser #Rcircle { width: 36px; height: 36px; font-size: 18px; line-height: 36px; }
-  .s3g-has-rbox .s3g-actions { right: 50px; max-width: calc(70vw - 44px); }
+  .s3g-has-rbox .s3g-actions { top: 50px; right: 8px; }
   html.s3g-has-rbox #topRightUser.open #Ricons, html.s3g-has-rbox #topRightUser #Ricons { top: 2px; right: 44px; gap: 6px; }
   html.s3g-has-rbox #topRightUser #Ricons .Ricon { width: 32px; height: 32px; font-size: 15px; }
 }

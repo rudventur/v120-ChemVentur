@@ -16,7 +16,7 @@ const MOCK = `(function () {
   if (window.rvUserbox) return;
   const calls = window.__rbCalls = { publish: 0, listen: 0, leave: 0 };
   const css = document.createElement('style');
-  css.textContent = '#topRightUser{position:fixed;top:14px;right:14px;z-index:999999}#Rcircle{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-size:28px;color:#0f4;border:3px solid #0f4;background:#000}#useRbox{position:fixed;top:90px;right:14px;width:300px;height:300px;background:#020}#useRbox.hidden{display:none}';
+  css.textContent = '#topRightUser{position:fixed;top:14px;right:14px;z-index:999999}#Rcircle{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-size:28px;color:#0f4;border:3px solid #0f4;background:#000}#Ricons{position:absolute;top:8px;right:68px;display:flex;gap:12px}#Ricons>div{width:44px;height:44px}#useRbox{position:fixed;top:90px;right:14px;width:300px;height:300px;background:#020}#useRbox.hidden{display:none}';
   document.head.appendChild(css);
   const root = document.createElement('div'); root.id = 'topRightUser';
   root.innerHTML = '<div id="Rcircle">R</div><div id="Ricons"><div id="iconUser">👤</div></div><div id="useRbox" class="hidden"><input type="text" id="username"><input type="checkbox" id="rbRoomVisible"></div>';
@@ -95,6 +95,22 @@ const overlap = (a, b) => a && b && a.width > 0 && b.width > 0 && !(a.right <= b
   ok(await ev(() => CHEMVENTUR.Stage3Game.Game.paused), 'a game the player paused stays paused after the useRbox closes');
   await ev(() => CHEMVENTUR.Stage3Game.Game.resume());
 
+  // the ☰ row has a 👤 useRbox entry; the R's rolling icons never cover the ☰ row
+  const iconsClear = (p) => p.evaluate(() => {
+    const I = document.getElementById('Ricons').getBoundingClientRect(), R = document.getElementById('Rcircle').getBoundingClientRect();
+    const hits = [];
+    document.querySelectorAll('.s3g-actions > *').forEach(e => { const r = e.getBoundingClientRect(); if (!r.width) return;
+      for (const B of [I, R]) if (!(r.right <= B.left || B.right <= r.left || r.bottom <= B.top || B.bottom <= r.top)) hits.push((e.title || e.textContent).slice(0, 16)); });
+    return hits; });
+  await ev(() => { const r = document.getElementById('topRightUser'); if (!r.classList.contains('open')) r.classList.add('open'); }); await sleep(450);
+  let hits = await iconsClear(page);
+  ok(hits.length === 0, 'desktop: with the R rolled out, its icons cover nothing of the ☰ row', hits.join(','));
+  s = await ev(() => { const b = document.querySelector('.s3g-actions .s3g-rboxbtn'); if (!b || b.hidden) return null; b.click(); return true; }); await sleep(450);
+  const st2 = await ev(() => ({ open: !document.getElementById('useRbox').classList.contains('hidden'), paused: CHEMVENTUR.Stage3Game.Game.paused }));
+  ok(s && st2.open && st2.paused, 'the 👤 useRbox button in the ☰ row opens the useRbox (and the game pauses)', JSON.stringify(st2));
+  await ev(() => document.getElementById('useRbox').classList.add('hidden')); await sleep(450);
+  await ev(() => document.getElementById('topRightUser').classList.remove('open'));
+
   // turn the preview on from the options window
   await ev(() => { const i = document.querySelector('.s3g-netrow input'); i.checked = true; i.dispatchEvent(new Event('change')); }); await sleep(300);
   s = await ev(() => ({ st: CHEMVENTUR.net.status(), ch: localStorage.getItem('rudventur_channel'), vis: document.getElementById('rbRoomVisible').checked, calls: window.__rbCalls, saved: localStorage.getItem('cv.s3g.net.v1') }));
@@ -133,6 +149,13 @@ const overlap = (a, b) => a && b && a.width > 0 && b.width > 0 && !(a.right <= b
   await ev(() => CHEMVENTUR.Stage3Game.Game.start()); await sleep(400);
   L = await layout(page);
   ok(L.hits.length === 0 && L.rOnTop, 'phone in game: touch pads, toggles and HUD stay clear of the R', JSON.stringify(L.hits));
+  await ev(() => document.getElementById('topRightUser').classList.add('open')); await sleep(450);
+  { const hp = await page.evaluate(() => {
+      const I = document.getElementById('Ricons').getBoundingClientRect(), hits = [];
+      document.querySelectorAll('.s3g-actions > *, .s3g-touchbar > *').forEach(e => { const r = e.getBoundingClientRect(); if (r.width && !(r.right <= I.left || I.right <= r.left || r.bottom <= I.top || I.bottom <= r.top)) hits.push(e.title || e.textContent); });
+      return hits; });
+    ok(hp.length === 0, 'phone: with the R rolled out, its icons cover nothing of the ☰ row or the touch buttons', hp.join(',')); }
+  await ev(() => document.getElementById('topRightUser').classList.remove('open'));
   await ev(() => { CHEMVENTUR.Stage3Game.Steering.setMode && CHEMVENTUR.Stage3Game.Steering.setMode('cessna'); }); await sleep(300);
   L = await layout(page);
   ok(L.hits.length === 0 && L.rOnTop, 'phone, Cessna sticks and instruments: still clear of the R', JSON.stringify(L.hits));
@@ -147,7 +170,14 @@ const overlap = (a, b) => a && b && a.width > 0 && b.width > 0 && !(a.right <= b
       L = await layout(page);
       ok(L.hits.length === 0 && L.rOnTop, 'REAL useRbox (' + vp.width + '×' + vp.height + '): nothing overlaps the R', JSON.stringify(L));
       await page.click('#Rcircle'); await sleep(600);
+      { const hr = await page.evaluate(() => { const I = document.getElementById('Ricons').getBoundingClientRect(), hits = [];
+          document.querySelectorAll('.s3g-actions > *').forEach(e => { const r = e.getBoundingClientRect(); if (r.width && !(r.right <= I.left || I.right <= r.left || r.bottom <= I.top || I.bottom <= r.top)) hits.push(e.title || e.textContent); });
+          return hits; });
+        ok(hr.length === 0, 'REAL useRbox (' + vp.width + '): the rolled-out R icons cover nothing of the ☰ row', hr.join(',')); }
       await page.screenshot({ path: path.join(shotDir, name) });
+      if (vp.width === 1280) await page.evaluate(() => { if (document.querySelector('.s3g-hide-actions')) document.querySelector('.s3g-actions .s3g-ptog').click(); });
+      if (vp.width === 1280) await sleep(300);
+      if (vp.width === 1280) await page.screenshot({ path: path.join(shotDir, 'v120-corner-rbox.png'), clip: { x: 560, y: 0, width: 720, height: 200 } });
       await ctx.close();
     }
   }
