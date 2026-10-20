@@ -107,6 +107,7 @@
       if (G.PNE) G.PNE.attach(this);
       if (G.Grid) G.Grid.attach(this);
       if (G.Steering) G.Steering.attach(this);   // steering modes: Classic (default), Cessna, Gamepad; options window (O)
+      if (G.Net) G.Net.attach(this);             // multiplayer preview (off by default) and the capital R glue: js/s3g-net.js
       if (G.Stages) G.Stages.attach(this);       // opening screen: stage selector
       if (G.Keys) { G.Keys.attach(this); G.Keys.on('change', () => this._relabel()); this._relabel(); }   // keyboard layer: bindings, labels, keyboard options window
       this._bindInput();
@@ -619,6 +620,7 @@
         if (G.Chaos) G.Chaos.tick(this, dt, sim);
         if (this.timeRev) this._rewind(dt); else { this._record(dt); W.step(sim, { shipPos: this.ship.position, shipRadius: 2.2 }); }
         if (G.Bots) G.Bots.update(dt);
+        if (G.Net) G.Net.tick(dt);
         this.targetTimer -= dt;
         if (this.targetTimer <= 0) { this.targetTimer = 0.5; this._checkTargets(); }
         if (this.rainOn) { this.rainTimer -= dt; if (this.rainTimer <= 0) { this.rainTimer = C.RAIN_INTERVAL; this._rainOne(); } }
