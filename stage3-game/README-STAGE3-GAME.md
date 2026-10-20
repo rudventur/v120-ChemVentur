@@ -35,6 +35,26 @@ The blaster was removed from the gun rack on `main` (commit d43c80e, "Bring the 
 
 Free atoms you fly through go into your **Collected** tray. Atoms bond when they meet with enough energy and both still have free valence. The **target** in the top-left (e.g. "Hydrogen H2") scores when you build it and identify it.
 
+## Steering modes (`js/s3g-steering.js`)
+
+Press **O** or the **⚙** button (top left) for the options window; the start screen has a mode picker too. Settings are stored in `localStorage` under `cv.s3g.steering.v1`. `?steer=classic|cessna|gamepad` picks a mode for one visit without saving it.
+
+All steering reaches the ship through one normalized command object (`Steering.command(game, dt)`): body-frame `move {x,y,z}`, `yawRate`, `pitchRate`, `rollRate`, drag deltas, and a held `throttle`. `Game._updateShip` only applies that object. `Game.yaw` and `Game.pitch` are kept in step in every mode.
+
+| Mode | What it is |
+| --- | --- |
+| **Classic** (default) | Unchanged: W A S D + R F fly, arrows / right-drag / steer pad turn, yaw and pitch angles, no roll. |
+| **Cessna** | An approximation of Cessna-style controls. Keys: **A / D** aileron (roll), **W / S** elevator (S = nose up), **Q / E** rudder, **R / F** throttle (held). Touch: right stick = aileron + elevator, left stick = rudder + throttle (the lever holds, shown by the cyan bar on the stick's edge). Quaternion attitude, camera "up" blends towards the ship's up, attitude indicator + speed + throttle at the top centre, and a soft turn-back near the arena edge (the nose is eased round and the speed drops; the wall is only a last resort and never bounces). |
+| **Gamepad** | Classic sources plus a controller (standard mapping): left stick move, right stick turn, L2 / R2 down / up, A or R1 fire, D-pad left / right guns, up / down element, Y identify, B c2c mode, Start pause, Select options. In Cessna mode the controller steers the aircraft instead. |
+
+Assist level (Cessna): **Off** (raw, keeps rotating), **Stability** (stops turning when the stick is centred), **Arcade** (also levels the wings and nose and turns when banked). Other settings: sensitivity, invert pitch, left-handed (swaps sticks / pads and the touch bar), deadzone, expo curve, auto-switch to pad.
+
+Device detection (`Steering.detect`, re-run on resize and rotation): `(pointer: coarse)` / `(pointer: fine)` / `(hover: hover)` / touch points give touch-primary vs mouse + keyboard; the short screen side gives phone (< 600 px) / tablet / desktop; width vs height gives landscape / portrait. It sets `data-device` and `data-orient` on the HUD and decides the layout (touch pads or sticks appear only on touch-primary devices). It never overrides the saved mode: the default is Classic, a plain controller press switches to Gamepad once (if auto-switch is on), and everything is changeable in the options window.
+
+Touch sticks: pointer events with `setPointerCapture` (one finger per stick, both sticks and the buttons work together), `touch-action: none`, `preventDefault`, spring to the centre with easing, deadzone and expo, sizes `clamp(96px, min(30vh, 26vw), 190px)`, safe-area insets (`env(safe-area-inset-*)`, `viewport-fit=cover`), and the touch bar always sits on the inner side of a stick so nothing overlaps. The existing "turn your phone sideways" prompt is unchanged.
+
+Not done yet (follow-ups): phone tilt steering (shown as "later" in the options), per-button controller remapping, haptics, a real flight-model tuning pass.
+
 ## FIRST DISCOVERY banners
 The **first time** a new type of matter or energy appears, a neon banner `FIRST DISCOVERY: <name>` shows for about **2.5 s** with a low tone. The camera is not touched; the game slows down briefly while the banner shows (added on `main` in d43c80e).
 
@@ -144,19 +164,21 @@ js/s3g-game.js             three.js scene, input, HUD, guns, identify, rain, deb
 js/s3g-guns.js             the old gun rack as tunable guns (ATOM, SHOT, ANTI, GRAV, TIME, rain)
 js/s3g-pne.js              guns 1–3 and 5: shotgun1proton, SHOTGUN2neutron, Electrogun (amps, volts, watts), shotgun5
 js/s3g-grid.js             Grid panel: charge markers, gravity, temperature layers, pressure plates
+js/s3g-steering.js         steering modes (Classic, Cessna, Gamepad), options window, touch sticks, instruments
 js/s3g-discovery.js        FIRST DISCOVERY banners (discovered set, queue, localStorage, K toggle)
 js/s3g-bots.js             10 bots in 3D (v118 Collector/Scientist/Chaos/Helper/Reporter/Peace/Homeless/Lover + Scraper, Produce)
 tests/s3g-headless.js      headless Chrome test (puppeteer-core)
 tests/s3g-bots-headless.js headless Chrome test for the bots
 tests/s3g-guns-headless.js headless Chrome test for guns 1–3 and the Grid panel
 tests/s3g-electrics-headless.js headless Chrome test for the Electrogun electrics and shotgun5
+tests/s3g-steering-headless.js headless Chrome test for steering modes, options, touch sticks and a mocked gamepad
 screenshot-*.png
 ```
 CDNs (pinned): three.js `0.169.0` (jsDelivr, unpkg fallback) and RDKit.js `2025.3.4-1.0.0` (unpkg). Lookups use the PubChem PUG-REST API, and results are cached in localStorage under `cv.stage3.v1:`.
 
 ## Attaching it to ChemVentur later
 1. Copy `css/stage3-game.css` and `js/s3g-*.js` into the main repo. `js/stage3-chem.js` is shared with the Stage 3 overlay, so keep only one copy.
-2. Load the scripts in this order: `stage3-chem.js`, `s3g-core.js`, `s3g-audio.js`, `s3g-world.js`, `s3g-game.js`, `s3g-guns.js`, `s3g-discovery.js`, `s3g-bots.js`, `s3g-pne.js`, `s3g-grid.js` (as in `index.html`). Discovery, bots, guns 1–3 and the Grid are optional; the game runs without them.
+2. Load the scripts in this order: `stage3-chem.js`, `s3g-core.js`, `s3g-audio.js`, `s3g-world.js`, `s3g-game.js`, `s3g-guns.js`, `s3g-discovery.js`, `s3g-bots.js`, `s3g-pne.js`, `s3g-grid.js`, `s3g-steering.js` (as in `index.html`). Discovery, bots, guns 1–3 and the Grid are optional; the game runs without them.
 3. Mount the game into any sized container, e.g. a full-screen overlay div:
 ```js
 const box = document.getElementById('stage3-game-overlay');      // position:fixed; inset:0
@@ -219,9 +241,22 @@ The test checks:
 - FIRST DISCOVERY banners for proton blast, neutron nucleus and ion; no page errors
 - screenshots `gun1-spray.png`, `gun2-neutron.png`, `gun3-electro.png`, `grid-panel.png`
 
+`node tests/s3g-steering-headless.js http://127.0.0.1:8877/ [screenshotDir]` runs the steering test (155 checks): picker and defaults, persistence, Classic through the command object, Cessna keys, assist levels, soft turn-back, options window, multi-touch sticks on phone and tablet sizes in landscape and portrait (no overlap with the touch bar), left-handed swap, and a mocked `navigator.getGamepads`.
+
+## Keyboard layer and stage selector (`js/s3g-keys.js`, `js/s3g-stages.js`)
+- **One bindings table** for every action (flying, firing, guns, toggles). Keys are matched by `event.code`, the physical place of the key, so every layout works (Polish, German, French, Russian, Greek, Dvorak and so on). Defaults are exactly the old key map.
+- **Layout-aware names:** `navigator.keyboard.getLayoutMap()` where it exists (Chromium) shows the character printed on your own key; elsewhere the name is learned from your key presses; otherwise it is derived from the code. Help, gun hints and buttons all use these names.
+- **🔤 Keyboard options** (button top-left, or F2): click a key box, press the new key. Two keys per action. Escape cancels, Backspace clears. A key already in use shows who owns it and offers "Take it". Presets: W A S D, arrow keys, E S D F, I J K L, left-handed numpad. Reset all. Saved in `localStorage` as `cv.s3g.keys.v1`.
+- **The button only shows when a keyboard is detected**: a fine pointer with hover (mouse or trackpad), or the first real key press. A touch-only phone never sees it until a key is pressed. There is never an on-screen keyboard.
+- **Input hygiene:** hotkeys are ignored while Ctrl, Meta, AltGr or Alt are held, during IME composition and when the focus is in an input, textarea, select or editable element. Held keys are cleared when the window loses focus or the tab is hidden.
+- **Opening screen = options and stage selector:** Stage 3 (this game), Stages 0, 1 and 2 (link to the older `game-v118.html`), Stage 4 "coming soon", then the steering picker (Classic stays the default) and a link to the keyboard options.
+- Steering modes (Classic, Cessna, Gamepad) read their keys from the same table, so presets change how you fly in every mode.
+
+`node tests/s3g-keys-headless.js http://127.0.0.1:8877/stage3-game/ [outDir] [screenshotDir]` runs the keyboard and stage selector test (80 checks): defaults, rebinding, conflicts, presets, labels, guards, keyboard button visibility, no on-screen keyboard, stage selector, screenshots `keys-phone-start.png`, `keys-phone-window.png`, `keys-desktop-start.png`, `keys-desktop-window.png`.
+
 ## Caveats (it's a beginning)
 - No multiplayer (deliberately out of scope).
 - Bonds are simple springs with 1-3 repulsion. Geometry is approximate, not real VSEPR. The PubChem conformer swap shows real geometry.
 - Rain and identification need network access (PubChem, unpkg for RDKit). If RDKit is unavailable or can't parse the build, identification sends the molblock straight to PubChem. Without network, the rain falls back to random H/O atoms.
 - Browsers only allow sound after a user gesture (the START button handles this).
-- Tested in headless Chrome (SwiftShader). Mobile and touch were only sanity-built and are not tuned.
+- Tested in headless Chrome (SwiftShader), including emulated touch. Real phones, tablets, controllers and non-Latin keyboards have not been tried by hand yet.

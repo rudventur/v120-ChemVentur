@@ -106,6 +106,9 @@
       if (G.Bots) G.Bots.attach(this);
       if (G.PNE) G.PNE.attach(this);
       if (G.Grid) G.Grid.attach(this);
+      if (G.Steering) G.Steering.attach(this);   // steering modes: Classic (default), Cessna, Gamepad; options window (O)
+      if (G.Stages) G.Stages.attach(this);       // opening screen: stage selector
+      if (G.Keys) { G.Keys.attach(this); G.Keys.on('change', () => this._relabel()); this._relabel(); }   // keyboard layer: bindings, labels, keyboard options window
       this._bindInput();
       this._spawnStartAtoms();
       this.booted = true;
@@ -121,7 +124,8 @@
       this.started = true;
       A.unlock();
       if (this.hud) this.hud.startOverlay.hidden = true;
-      this._status('🚀 Go! 1 p⁺ shotgun 2 n shotgun 3 ⚡ electro 4 c2c 5 CHAOS ` mix 6 ATOM 7 SHOT 8 ANTI 9 GRAV 0 TIME · B = identify · G = grid');
+      const L = (id) => (G.Keys ? G.Keys.labelFor(id) : '?');
+      this._status('🚀 Go! ' + L('gunProton') + ' p⁺ shotgun ' + L('gunNeutron') + ' n shotgun ' + L('gunElectron') + ' ⚡ electro ' + L('gunC2c') + ' c2c ' + L('gunChaos') + ' CHAOS ' + L('gunMix') + ' mix ' + L('gunAtom') + ' ATOM ' + L('gunShotgun') + ' SHOT ' + L('gunAnti') + ' ANTI ' + L('gunGrav') + ' GRAV ' + L('gunTime') + ' TIME · ' + L('identify') + ' = identify · ' + L('grid') + ' = grid');
     },
 
     pause() { this.paused = true; },
@@ -326,25 +330,29 @@
       return this._forward();
     },
 
+    // fallback only if js/s3g-steering.js is missing: the original keyboard / pad steering
+    _classicCommand() {
+      const t = this.touch, n = (b) => (b ? 1 : 0), h = (id) => this.held(id);
+      const cmd = { attitude: 'euler', move: { x: n(h('moveRight')) - n(h('moveLeft')), y: n(h('moveUp')) - n(h('moveDown')), z: n(h('moveBack')) - n(h('moveForward')) },
+        yawRate: n(h('turnRight')) - n(h('turnLeft')), pitchRate: n(h('pitchUp')) - n(h('pitchDown')), yawDelta: 0, pitchDelta: 0 };
+      if (t.pad) { cmd.yawRate += t.pad.x; cmd.pitchRate -= t.pad.y; }
+      if (t.steer) { cmd.yawDelta = t.steer.dx * 0.004; cmd.pitchDelta = -t.steer.dy * 0.004; t.steer.dx = t.steer.dy = 0; }
+      if (t.joy) { cmd.move.x += t.joy.x; cmd.move.z += t.joy.y; }
+      if (t.move) { cmd.move.x += t.move.x; cmd.move.z += t.move.y; }
+      return cmd;
+    },
+
     _updateShip(dt) {
-      const k = this.keys;
+      // all steering goes through one normalized command (see js/s3g-steering.js); Classic = the original behaviour
+      const S = G.Steering, cmd = S ? S.command(this, dt) : this._classicCommand();
+      if (cmd.attitude === 'quat') { S.fly(this, cmd, dt); return; }
       const turn = C.SHIP_TURN * dt;
-      if (k.has('ArrowLeft')) this.yaw += turn;
-      if (k.has('ArrowRight')) this.yaw -= turn;
-      if (k.has('ArrowUp')) this.pitch += turn;
-      if (k.has('ArrowDown')) this.pitch -= turn;
-      if (this.touch.pad) { this.yaw -= this.touch.pad.x * turn; this.pitch -= this.touch.pad.y * turn; }
-      if (this.touch.steer) { this.yaw -= this.touch.steer.dx * 0.004; this.pitch -= this.touch.steer.dy * 0.004; this.touch.steer.dx = this.touch.steer.dy = 0; }
+      this.yaw -= cmd.yawRate * turn + cmd.yawDelta;
+      this.pitch += cmd.pitchRate * turn + cmd.pitchDelta;
       this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch));
       this.ship.quaternion.setFromEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
 
-      const local = new THREE.Vector3(
-        (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0),
-        (k.has('KeyR') ? 1 : 0) - (k.has('KeyF') ? 1 : 0),
-        (k.has('KeyS') ? 1 : 0) - (k.has('KeyW') ? 1 : 0)
-      );
-      if (this.touch.joy) { local.x += this.touch.joy.x; local.z += this.touch.joy.y; }
-      if (this.touch.move) { local.x += this.touch.move.x; local.z += this.touch.move.y; }
+      const local = new THREE.Vector3(cmd.move.x, cmd.move.y, cmd.move.z);
       if (local.lengthSq() > 1) local.normalize();
       this.shipVel.add(local.applyQuaternion(this.ship.quaternion).multiplyScalar(C.SHIP_ACCEL * dt));
       this.shipVel.multiplyScalar(Math.exp(-1.1 * dt));
@@ -601,7 +609,7 @@
       if (!this.paused) {
         this._updateShip(dt);
         this.fireCooldown = Math.max(0, this.fireCooldown - dt);
-        if ((this.mouse.fireHeld || this.keys.has('Space') || this.touch.fire) && this.gun !== 'c2c') this._trigger();
+        if ((this.mouse.fireHeld || this.held('fire') || this.touch.fire || (G.Steering && G.Steering.fireHeld)) && this.gun !== 'c2c') this._trigger();
         this._updateSeq(dt);
         let sim = (this.slow > 0 ? dt * 0.22 : dt) * (this.timeRev ? 0 : this.timeScale);
         if (this.slow > 0) this.slow -= dt;
@@ -624,41 +632,100 @@
     },
 
     // ================= INPUT =================
+    // is the key of this action held right now? (bindings table: js/s3g-keys.js; the fallback is the original keys)
+    held(id) {
+      if (G.Keys) return G.Keys.held(this.keys, id);
+      const LEGACY = { moveForward: 'KeyW', moveBack: 'KeyS', moveLeft: 'KeyA', moveRight: 'KeyD', moveUp: 'KeyR', moveDown: 'KeyF', turnLeft: 'ArrowLeft', turnRight: 'ArrowRight', pitchUp: 'ArrowUp', pitchDown: 'ArrowDown', rudderLeft: 'KeyQ', rudderRight: 'KeyE', fire: 'Space' };
+      return this.keys.has(LEGACY[id]);
+    },
+
+    // one press of a hotkey action (the keys themselves are chosen in the bindings table)
+    hotkey(id, e) {
+      const GUN = { gunProton: 'proton', gunNeutron: 'neutron', gunElectron: 'electron', gunC2c: 'c2c', gunChaos: 'chaos', gunMix: 'shotgun5', gunAtom: 'atom', gunShotgun: 'shotgun', gunAnti: 'anti', gunGrav: 'grav', gunTime: 'time' };
+      if (GUN[id]) {
+        if (GUNS.find(g => g.id === GUN[id])) this.selectGun(GUN[id]);
+        else this._status('That gun is not in this build yet.');
+        return;
+      }
+      switch (id) {
+        case 'c2cMode': this.toggleC2CMode(); break;
+        case 'elementPrev': this.cycleElement(-1); break;
+        case 'elementNext': this.cycleElement(1); break;
+        case 'identify': this.identify(); break;
+        case 'swap': this.swapInConformer(); break;
+        case 'rain': this.rainOn = !this.rainOn; this._status('🌧️ Molecule rain ' + (this.rainOn ? 'ON' : 'OFF')); break;
+        case 'pause': this.paused ? this.resume() : this.pause(); this._status(this.paused ? '⏸ Paused' : '▶ Resumed'); break;
+        case 'help': this.hud.help.hidden = !this.hud.help.hidden; break;
+        case 'bots': if (G.Bots) G.Bots.toggleAll(); break;
+        case 'grid': if (G.Grid) G.Grid.togglePanel(); break;
+        case 'powerUp': if (G.PNE) G.PNE.adjustPower(this.gun, +1); break;
+        case 'powerDown': if (G.PNE) G.PNE.adjustPower(this.gun, -1); break;
+        case 'discovery': if (G.Discovery) { if (e && e.shiftKey) G.Discovery.reset(); else G.Discovery.toggle(); } break;
+        case 'options': if (G.Steering) G.Steering.togglePanel(); break;
+        case 'keysWindow': if (G.Keys) G.Keys.toggle(); break;
+      }
+    },
+
+    // key names in the HUD, help and start screen follow the player's own bindings and layout
+    _relabel() {
+      const h = this.hud, K = G.Keys; if (!h || !K) return;
+      GUNS.forEach(g => {
+        const id = { proton: 'gunProton', neutron: 'gunNeutron', electron: 'gunElectron', c2c: 'gunC2c', chaos: 'gunChaos', shotgun5: 'gunMix', atom: 'gunAtom', shotgun: 'gunShotgun', anti: 'gunAnti', grav: 'gunGrav', time: 'gunTime', rain: 'rain' }[g.id];
+        g.keyLabel = id ? K.labelFor(id) : g.key;
+        const b = h.gunBtns[g.id]; if (b) b.title = g.keyLabel + ' · ' + g.label + ' — ' + g.info;
+      });
+      if (h.startGunEls) GUNS.forEach((g, i) => { if (h.startGunEls[i]) h.startGunEls[i].textContent = g.icon + ' ' + g.keyLabel + ' ' + g.info; });
+      if (h.actionBtns) {
+        h.actionBtns.identify.textContent = '🧪 What did I build?' + K.tag('identify');
+        h.actionBtns.rain.textContent = '🌧️ Rain' + K.tag('rain');
+        h.actionBtns.bots.textContent = '🤖 Bots' + K.tag('bots');
+        h.actionBtns.help.textContent = '❔ Help' + K.tag('help');
+      }
+      if (h.startHint) h.startHint.textContent = 'Help (' + K.labelFor('help') + ') shows the controls · sound starts after START';
+      if (h.swapBtn) h.swapBtn.textContent = '🔁 Swap in PubChem 3D' + K.tag('swap');
+      if (G.Grid && G.Grid.btn) G.Grid.btn.textContent = '▦ Grid' + K.tag('grid');
+      if (G.Steering && G.Steering.gear) G.Steering.gear.title = 'Steering options' + K.tag('options');
+      if (h.helpList) this._fillHelp();
+      this._hudNow();
+    },
+    _fillHelp() {
+      const h = this.hud, K = G.Keys, L = (id, sep) => K.labelFor(id, sep || ' ');
+      const rows = [
+        [L('moveForward') + ' ' + L('moveLeft') + ' ' + L('moveBack') + ' ' + L('moveRight'), 'fly forward / strafe left / back / strafe right'], [L('moveUp') + ' / ' + L('moveDown'), 'up / down'],
+        [L('turnLeft') + ' ' + L('turnRight') + ' ' + L('pitchUp') + ' ' + L('pitchDown') + ' · right-drag', 'turn left / right, nose up / down'],
+        ['Mouse', 'aim (crosshair)'], ['Left click · ' + L('fire'), 'fire'],
+        [L('gunProton') + ' · ' + L('gunNeutron') + ' · ' + L('gunElectron'), 'shotgun1proton (red p⁺ mist) · SHOTGUN2neutron (blue n, falls slightly) · Electrogun (chain lightning, makes ions)'],
+        [L('gunC2c') + ' · ' + L('gunChaos') + ' · ' + L('gunMix'), 'c2c tone gun · CHAOS shotgun · mix shotgun (strings, p⁺, n, charges, light, sound rings)'],
+        [L('gunAtom') + ' · ' + L('gunShotgun'), 'atom gun · atom shotgun'],
+        [L('gunAnti') + ' · ' + L('gunGrav') + ' · ' + L('gunTime'), 'anti gun · gravity orb · time bubble'],
+        ['Right-click', 'guns 1, 2 and mix: pellets per shot 1 · 3 · 7 · 15 · 31 (also the "x7" button) · Electrogun: amps = bolts 1 · 2 · 3 · 5 · 10 (⚡ button)'],
+        ['Wheel · ' + L('powerUp', ' / ') + ' · ' + L('powerDown', ' / '), 'guns 1, 2 and mix: power = range 15–90 (💪 button) · Electrogun: volts 0 V → 1 TV (🔋 button) · other guns: wheel = atom element'],
+        [L('c2cMode'), 'c2c 13 (chromatic) ⇄ c2c 8 (major)'], [L('elementPrev') + ' / ' + L('elementNext'), 'atom element'], [L('identify'), 'What did I build?'],
+        [L('grid'), 'Grid panel: charges · gravity · temperature · pressure'],
+        [L('swap'), 'swap in PubChem 3D conformer'], [L('rain'), 'molecule rain on/off'], [L('pause'), 'pause'], [L('help'), 'help'],
+        [L('discovery') + ' · Shift+' + L('discovery'), 'FIRST DISCOVERY banners on/off · reset discoveries'],
+        [L('bots'), 'bots: spawn all 10 / remove all'], [L('options') + ' · ⚙', 'steering options: mode (Classic · Cessna · Gamepad), sensitivity, assists, left-handed'],
+        [L('keysWindow') + ' · 🔤', 'keyboard options: change any key, presets (shown only when a keyboard is found)'],
+        ['Cessna mode', L('moveLeft') + '/' + L('moveRight') + ' aileron (roll) · ' + L('moveForward') + '/' + L('moveBack') + ' elevator (' + L('moveBack') + ' = nose up) · ' + L('rudderLeft') + '/' + L('rudderRight') + ' rudder · ' + L('moveUp') + '/' + L('moveDown') + ' throttle (held); touch: right stick aileron + elevator, left stick rudder + throttle'],
+        ['Touch', 'left: move · right: steer · buttons']
+      ];
+      h.helpList.textContent = '';
+      rows.forEach(([k, v]) => { h.helpList.appendChild(el('dt', { text: k })); h.helpList.appendChild(el('dd', { text: v })); });
+    },
+
     _bindInput() {
       const cvs = this.renderer.domElement;
       this._onKeyDown = (e) => {
-        if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
-        const c = e.code;
-        if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(c)) e.preventDefault();
-        if (!this.started && (c === 'Space' || c === 'Enter')) this.start();
+        const K = G.Keys;
+        if (K ? K.ignoreReason(e) : (e.ctrlKey || e.metaKey || e.isComposing || (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)))) return;   // hygiene guards: see js/s3g-keys.js
+        const c = e.code, act = K ? K.actionFor(c) : null, info = act && K.info(act);
+        if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(c) || (info && info.hold)) e.preventDefault();
+        if (!this.started && (c === 'Space' || c === 'Enter' || act === 'fire')) this.start();
         if (!this.keys.has(c)) {
-          if (c === 'Digit1') this.selectGun('proton');
-          else if (c === 'Digit2') this.selectGun('neutron');
-          else if (c === 'Digit3') this.selectGun('electron');
-          else if (c === 'Digit4') this.selectGun('c2c');
-          // Digit5: reserved for the planned shotgun5
-          else if (c === 'Digit5') this.selectGun('chaos');
-          else if (c === 'Backquote') this.selectGun('shotgun5');
-          else if (c === 'Digit6') this.selectGun('atom');
-          else if (c === 'Digit7') this.selectGun('shotgun');
-          else if (c === 'Digit8') this.selectGun('anti');
-          else if (c === 'Digit9') this.selectGun('grav');
-          else if (c === 'Digit0') this.selectGun('time');
-          else if (c === 'KeyC') this.toggleC2CMode();
-          else if (c === 'KeyZ') this.cycleElement(-1);
-          else if (c === 'KeyX') this.cycleElement(1);
-          else if (c === 'KeyB') this.identify();
-          else if (c === 'KeyT') this.swapInConformer();
-          else if (c === 'KeyM') { this.rainOn = !this.rainOn; this._status('🌧️ Molecule rain ' + (this.rainOn ? 'ON' : 'OFF')); }
-          else if (c === 'KeyP') { this.paused ? this.resume() : this.pause(); this._status(this.paused ? '⏸ Paused' : '▶ Resumed'); }
-          else if (c === 'KeyH') this.hud.help.hidden = !this.hud.help.hidden;
-          else if (c === 'KeyJ' && G.Bots) G.Bots.toggleAll();
-          else if (c === 'KeyG' && G.Grid) G.Grid.togglePanel();
-          else if ((c === 'Equal' || c === 'NumpadAdd') && G.PNE) G.PNE.adjustPower(this.gun, +1);
-          else if ((c === 'Minus' || c === 'NumpadSubtract') && G.PNE) G.PNE.adjustPower(this.gun, -1);
-          else if (c === 'KeyK' && G.Discovery) { if (e.shiftKey) G.Discovery.reset(); else G.Discovery.toggle(); }
+          if (act === 'fire') { if (this.gun === 'c2c') this.fireC2C(); }
+          else if (act && !info.hold) this.hotkey(act, e);
           else if (c === 'Space' && this.gun === 'c2c') this.fireC2C();
-          else if (c === 'Escape') { this.hud.idPanel.hidden = true; this.hud.help.hidden = true; }
+          else if (c === 'Escape') { this.hud.idPanel.hidden = true; this.hud.help.hidden = true; if (G.Steering) G.Steering.togglePanel(false); if (K) K.toggle(false); }
         }
         this.keys.add(c);
       };
@@ -814,12 +881,12 @@
       h.guns = el('div', { className: 's3g-guns' });
       h.gunBtns = {};
       GUNS.forEach(g => {
-        const b = el('button', { type: 'button', className: 's3g-btn s3g-gun', text: g.icon, title: g.key + ' · ' + g.label + ' — ' + g.info });
+        const b = el('button', { type: 'button', className: 's3g-btn s3g-gun', text: g.icon, title: (g.keyLabel || g.key) + ' · ' + g.label + ' — ' + g.info });
         b.addEventListener('click', () => this.selectGun(g.id));
         h.gunBtns[g.id] = b;
         h.guns.appendChild(b);
       });
-      h.modeBtn = el('button', { type: 'button', className: 's3g-btn s3g-mode', title: 'C: toggle c2c 13 / c2c 8' });
+      h.modeBtn = el('button', { type: 'button', className: 's3g-btn s3g-mode', title: 'Toggle c2c 13 / c2c 8' });
       h.modeBtn.addEventListener('click', () => this.toggleC2CMode());
       h.guns.appendChild(h.modeBtn);
       h.palette = el('div', { className: 's3g-palette' });
@@ -835,12 +902,16 @@
       h.cross = el('div', { className: 's3g-cross' });
 
       const mkBtn = (text, fn, title) => { const b = el('button', { type: 'button', className: 's3g-btn', text, title }); b.addEventListener('click', fn); return b; };
+      h.actionBtns = {
+        identify: mkBtn('🧪 What did I build?', () => this.identify()),
+        rain: mkBtn('🌧️ Rain', () => this.hotkey('rain')),
+        bots: mkBtn('🤖 Bots', () => { if (G.Bots) G.Bots.toggleAll(); }),
+        help: mkBtn('❔ Help', () => { h.help.hidden = !h.help.hidden; })
+      };
       h.actions = el('div', { className: 's3g-actions' }, [
-        mkBtn('🧪 What did I build? (B)', () => this.identify()),
-        mkBtn('🌧️ Rain (M)', () => { this.rainOn = !this.rainOn; this._status('🌧️ Molecule rain ' + (this.rainOn ? 'ON' : 'OFF')); }),
-        mkBtn('🤖 Bots (J)', () => { if (G.Bots) G.Bots.toggleAll(); }),
+        h.actionBtns.identify, h.actionBtns.rain, h.actionBtns.bots,
         mkBtn('🔊 Sound', (e) => { A.setMuted(!A.muted); e.target.textContent = A.muted ? '🔇 Sound' : '🔊 Sound'; }),
-        mkBtn('❔ Help (H)', () => { h.help.hidden = !h.help.hidden; }),
+        h.actionBtns.help,
         mkBtn('⌨️', () => this._deskClick('#rvd-bl', 0), 'Keyboards'),
         mkBtn('💬', () => this._deskClick('#rvd-bl', 1), 'Global chat'),
         mkBtn('🍿', () => this._deskClick('#rvd-br', 0), 'Popcorn Hub')
@@ -856,29 +927,16 @@
         dl.appendChild(dd);
       });
       h.idNotes = el('ul', { className: 's3g-notes' });
-      h.swapBtn = mkBtn('🔁 Swap in PubChem 3D (T)', () => this.swapInConformer());
+      h.swapBtn = mkBtn('🔁 Swap in PubChem 3D', () => this.swapInConformer());
       h.idPanel = el('div', { className: 's3g-panel s3g-id', hidden: true }, [
         el('div', { className: 's3g-panel-title', text: '🧪 WHAT DID I BUILD?' }), dl, h.idNotes,
         el('div', { className: 's3g-row' }, [h.swapBtn, mkBtn('✕ Close', () => { h.idPanel.hidden = true; })])
       ]);
 
       // help + start overlays
-      const controls = [
-        ['W A S D', 'fly forward / strafe / back'], ['R / F', 'up / down'], ['Arrows · right-drag', 'turn (yaw / pitch)'],
-        ['Mouse', 'aim (crosshair)'], ['Left click · Space', 'fire'],
-        ['1 · 2 · 3', 'shotgun1proton (red p⁺ mist) · SHOTGUN2neutron (blue n, falls slightly) · Electrogun (chain lightning, makes ions)'],
-        ['4 · 5 · `', 'c2c tone gun · CHAOS shotgun · mix shotgun (strings, p⁺, n, charges, light, sound rings)'],
-        ['6 · 7', 'ATOM gun · atom SHOTgun'], ['8 · 9 · 0', 'ANTI · GRAV orb · TIME bubble'],
-        ['Right-click', 'guns 1, 2 and mix: pellets per shot 1 · 3 · 7 · 15 · 31 (also the "x7" button) · Electrogun: amps = bolts 1 · 2 · 3 · 5 · 10 (⚡ button)'],
-        ['Wheel · + / −', 'guns 1, 2 and mix: power = range 15–90 (💪 button) · Electrogun: volts 0 V → 1 TV (🔋 button) · other guns: wheel = atom element'],
-        ['C', 'c2c 13 (chromatic) ⇄ c2c 8 (major)'], ['Z / X', 'atom element'], ['B', 'What did I build?'], ['G', 'Grid panel: charges · gravity · temperature · pressure'],
-        ['T', 'swap in PubChem 3D conformer'], ['M', 'molecule rain on/off'], ['P', 'pause'], ['H', 'help'],
-        ['K · Shift+K', 'FIRST DISCOVERY banners on/off · reset discoveries'],
-        ['J', 'bots: spawn all 10 / remove all'],
-        ['Touch', 'left: move · right: steer · buttons']
-      ];
       const helpList = el('dl', { className: 's3g-help-list' });
-      controls.forEach(([k, v]) => { helpList.appendChild(el('dt', { text: k })); helpList.appendChild(el('dd', { text: v })); });
+      h.helpList = helpList;   // filled by _fillHelp(): key names follow the bindings and the player's layout
+      if (!G.Keys) helpList.appendChild(el('dd', { text: 'Keyboard layer missing (js/s3g-keys.js).' }));
       const c2cInfo = el('p', { className: 's3g-small', text: 'c2c tone dots: C (root) = BOND to nearest atom · white keys = HARMONY (energize) · sharps = DISSONANCE (break a bond) · top C = RESONANCE (bond order +1). Energized atoms bond when they touch. Fly through loose atoms to collect them.' });
       h.help = el('div', { className: 's3g-panel s3g-help', hidden: true }, [el('div', { className: 's3g-panel-title', text: '❔ CONTROLS' }), helpList, c2cInfo,
         el('div', { className: 's3g-row' }, [mkBtn('✕ Close', () => { h.help.hidden = true; })])]);
@@ -887,7 +945,7 @@
       h.startOverlay = el('div', { className: 's3g-start' }, [
         el('div', { className: 's3g-start-title', text: '🚀 CHEMVENTUR · STAGE 3' }),
         el('div', { className: 's3g-start-sub', text: 'Fly. Shoot atoms. Bond them in 3D. Play the c2c tone gun. Ask PubChem what you built.' }),
-        startBtn, el('div', { className: 's3g-small', text: 'H = controls · sound starts after START' }),
+        startBtn, (h.startHint = el('div', { className: 's3g-small', text: 'Help shows the controls · sound starts after START' })),
         el('div', { className: 's3g-start-help' }, [
           el('div', { className: 's3g-start-row' }, [
             el('b', { text: 'Corner toggles (clean screen)' }),
@@ -901,7 +959,7 @@
             el('b', { text: 'Hide panels' }),
             el('span', { text: 'every small round button hides or shows its panel and is remembered: ℹ️ score · ☰ top buttons · 🎨 elements · 🔫 guns (bottom middle) · 🕹️ pads' })
           ]),
-          el('div', { className: 's3g-start-guns' }, GUNS.map(g => el('span', { className: 's3g-start-gun', text: g.icon + ' ' + g.key + ' ' + g.info })))
+          el('div', { className: 's3g-start-guns' }, (h.startGunEls = GUNS.map(g => el('span', { className: 's3g-start-gun', text: g.icon + ' ' + g.key + ' ' + g.info }))))
         ])
       ]);
 
@@ -944,9 +1002,9 @@
       h.stats.textContent = 'SCORE ' + this.score + ' · ATOMS ' + W.atoms.length + ' · BONDS ' + W.bonds.length + ' · ' + this.fps + ' FPS';
       h.target.textContent = '🎯 BUILD: ' + t.name + ' ' + t.formula;
       Object.keys(h.gunBtns).forEach(id => h.gunBtns[id].classList.toggle('active', id === this.gun));
-      if (h.gunBtns.atom) h.gunBtns.atom.title = '6 · ATOM: ' + C.PALETTE[this.elementIdx] + ' — atom gun (wheel = element)';
+      if (h.gunBtns.atom) h.gunBtns.atom.title = ((GUNS.find(g => g.id === 'atom') || {}).keyLabel || '6') + ' · ATOM: ' + C.PALETTE[this.elementIdx] + ' — atom gun (wheel = element)';
       h.modeBtn.textContent = '🎹';
-      h.modeBtn.title = 'C: c2c mode — now ' + G.C2C.MODES[this.c2cMode].label + ' (tap to switch 13 / 8)';
+      h.modeBtn.title = (G.Keys ? G.Keys.labelFor('c2cMode') : 'C') + ': c2c mode — now ' + G.C2C.MODES[this.c2cMode].label + ' (tap to switch 13 / 8)';
       h.modeBtn.classList.toggle('active', this.gun === 'c2c');
       h.chips.forEach((b, i) => b.classList.toggle('active', i === this.elementIdx));
       const inv = Object.keys(W.inventory).map(k => k + '×' + W.inventory[k]).join(' ');
