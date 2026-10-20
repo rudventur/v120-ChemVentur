@@ -87,7 +87,7 @@ Examples: 230 V × 10 A = 2.3 kW, 690 J, 3 C → makes ions of charge 3 · 100 M
 
 The help panel (H) has an **electrics card** with well-known real figures: AA battery 1.5 V, car battery 12 V, mains 230 V (a 13 A plug fuse allows about 3 kW), a static shock of a few thousand volts, UK power lines up to 400 kV, lightning about 100 MV (estimates reach about 1 GV) with about 30 kA typical peak current, and a pulsar at about 10¹² V or more (approximate). The game's 0.3 s strike is much longer than a real lightning stroke (under a millisecond); it is a game convention, so energies are bigger than in reality.
 
-**Mix shotgun, internally shotgun5 (key `, left of 1; key 5 belongs to the CHAOS shotgun).** The same pellets-per-shot modes, beam width limit and power (range) as guns 1 and 2, but every pellet is a random pick from a mix, so each shot is different:
+**Mix shotgun, internally shotgun5 (the key left of 1, backquote; key 5 belongs to the CHAOS shotgun).** The same pellets-per-shot modes, beam width limit and power (range) as guns 1 and 2, but every pellet is a random pick from a mix, so each shot is different:
 - **string squiggles** (violet, wriggling): a glimpse of the tiny string scale, like the Stage 0 strings; a hit makes the atom vibrate (energy);
 - **protons** (red) and **neutrons** (blue): exactly the gun 1 and gun 2 pellets, with the same hits (push, proton blast, neutron capture, nuclei);
 - **charge dots** (red + or blue −): give the atom they hit that charge (an ion, up to ±3);
