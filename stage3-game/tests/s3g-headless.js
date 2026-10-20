@@ -52,11 +52,11 @@ const CHROMATIC = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], MAJOR = [0, 2, 4, 
 
   // --- keyboard: gun 4 (c2c) + C toggles label
   await page.keyboard.press('Digit4');
-  const lbl1 = await page.$eval('.s3g-mode', b => b.textContent);
+  const lbl1 = await page.$eval('.s3g-mode', b => b.title);
   await page.keyboard.press('KeyC');
-  const lbl2 = await page.$eval('.s3g-mode', b => b.textContent);
+  const lbl2 = await page.$eval('.s3g-mode', b => b.title);
   await page.keyboard.press('KeyC');
-  ok(lbl1 !== lbl2 && ['c2c 13', 'c2c 8'].includes(lbl1) && ['c2c 13', 'c2c 8'].includes(lbl2), 'C key toggles HUD label', lbl1 + ' -> ' + lbl2);
+  ok(lbl1 !== lbl2 && /c2c 13|c2c 8/.test(lbl1) && /c2c 13|c2c 8/.test(lbl2), 'C key toggles the c2c mode (icon button tooltip)', lbl1 + ' -> ' + lbl2);
 
   // --- mid-flight c2c screenshot (keyboard fire)
   await page.evaluate(() => { CHEMVENTUR.Stage3Game.Game.c2cMode = 'chromatic'; });
