@@ -54,7 +54,8 @@
     { id: 'rain', key: 'M', label: 'RAIN', icon: '🌧️', info: 'rain on / off' },
     { id: 'anti', key: '8', label: 'ANTI', icon: '🌀', info: 'anti gun' },
     { id: 'grav', key: '9', label: 'GRAV', icon: '🌍', info: 'gravity gun' },
-    { id: 'time', key: '0', label: 'TIME', icon: '⏳', info: 'time slow gun' }
+    { id: 'time', key: '0', label: 'TIME', icon: '⏳', info: 'time slow gun' },
+    { id: 'net', key: 'N', label: 'NET', icon: '🕸️', info: 'scrap net gun: big gluon nets at half the speed of light catch scrap and anything coming (s3g-scrapnet.js)' }
   ];
 
   const TARGETS = [
@@ -641,7 +642,7 @@
 
     // one press of a hotkey action (the keys themselves are chosen in the bindings table)
     hotkey(id, e) {
-      const GUN = { gunProton: 'proton', gunNeutron: 'neutron', gunElectron: 'electron', gunC2c: 'c2c', gunChaos: 'chaos', gunMix: 'shotgun5', gunAtom: 'atom', gunShotgun: 'shotgun', gunAnti: 'anti', gunGrav: 'grav', gunTime: 'time' };
+      const GUN = { gunProton: 'proton', gunNeutron: 'neutron', gunElectron: 'electron', gunC2c: 'c2c', gunChaos: 'chaos', gunMix: 'shotgun5', gunAtom: 'atom', gunShotgun: 'shotgun', gunAnti: 'anti', gunGrav: 'grav', gunTime: 'time', gunNet: 'net' };
       if (GUN[id]) {
         if (GUNS.find(g => g.id === GUN[id])) this.selectGun(GUN[id]);
         else this._status('That gun is not in this build yet.');
@@ -649,6 +650,7 @@
       }
       switch (id) {
         case 'c2cMode': this.toggleC2CMode(); break;
+        case 'repair': if (G.ScrapNet) G.ScrapNet.repair(); break;
         case 'elementPrev': this.cycleElement(-1); break;
         case 'elementNext': this.cycleElement(1); break;
         case 'identify': this.identify(); break;
