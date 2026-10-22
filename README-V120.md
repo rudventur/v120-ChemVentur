@@ -86,3 +86,12 @@ Still saying v119 (left as-is): `js/left-panel-sync.js` header comment, the `js/
 - **v120** (Oct 2026): Stage 3 3D molecules (PubChem 3D + RDKit.js + 3Dmol.js), What did I build?, Spawn in game.
 - **v119** (Sep 2026): Left Panel taskbar, room code panel, phone controls. See `README-V119.md`.
 - **v118**: AI Players & Chat Edition. **v117 Multi**: multiplayer + touch + microphone.
+
+## 🚀🕸️🔧 v120 additions: rocket deploy points, Gun 6 Scrap Net, metal only repair
+
+Only additions. New files: `js/v120-netgun.js` (older stages game, `game-v118.html`) and `stage3-game/js/s3g-rockets.js` (3D game).
+
+- **Rocket deploy points.** Shots leave from a launch point on the ship instead of its centre: the nose tube (guns 3, 6, 9, 0) or alternating left and right wing hardpoints (other guns). Each shot starts at 30% speed, burns its engine to full speed and leaves an orange exhaust trail. The 3D game launches from alternating wing tips (musical c2c dots keep the nose).
+- **Gun 6 = 🕸️ Scrap Net** (the old Gun 6 shotgun lives on as Gun 5). Fires a big net at half the speed of light (game scale: light = 80 pixels per frame). It catches anything it passes: atoms, loose particles, Stage 0 strings and quarks. When it stops it anchors as a real Stage 0 gluon web (`StringSystem.gluonWebs`), linked by a gluon tether to the nearest gluon web, and keeps catching anything coming for about 5 seconds. Options: net size, speed as a share of light.
+- **Metal only repair.** Caught atoms go to the 🛠️ Hull & Scrap Hold panel: metal atoms (metals of the periodic table) are counted on their own; non-metals, metalloids and other scrap are kept but **cannot repair**. "🔧 Repair with metal" fixes 4 hull points per metal atom. The garage repairs also cost metal atoms now (old cost ÷ 5). Fast loose atoms hitting the ship in Stages 1 and 2 do 2 damage; the ship shows cracks, smoke and a hull bar.
+- **Fix:** Stages 1 and 2 had stopped updating because `ProjectilePhysics` was left as an empty stub in `js/guns.js`; it is restored from the first v120 commit.
