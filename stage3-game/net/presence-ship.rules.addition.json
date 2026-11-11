@@ -1,0 +1,26 @@
+{
+  "_note": "NOT APPLIED. Proposed addition for the popcoin Firebase Realtime Database rules (popcoin/database.rules.json in rudventur/RudVentur.com), next to \"popcoin\" and \"presence\" inside \"rules\". It adds a separate games/chemventur node, so popcoin and the useRbox presence rules stay exactly as they are. Remove this _note key before pasting.",
+  "games": {
+    "chemventur": {
+      "rooms": {
+        "$room": {
+          ".read": "auth != null",
+          ".validate": "$room.matches(/^[a-z0-9_-]{1,32}$/)",
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['x', 'y', 'z', 't']) && root.child('presence').child('rooms').child($room).child($uid).exists()",
+            "x": { ".validate": "newData.isNumber() && newData.val() >= -200 && newData.val() <= 200" },
+            "y": { ".validate": "newData.isNumber() && newData.val() >= -200 && newData.val() <= 200" },
+            "z": { ".validate": "newData.isNumber() && newData.val() >= -200 && newData.val() <= 200" },
+            "yaw": { ".validate": "newData.isNumber() && newData.val() >= -10 && newData.val() <= 10" },
+            "pitch": { ".validate": "newData.isNumber() && newData.val() >= -10 && newData.val() <= 10" },
+            "roll": { ".validate": "newData.isNumber() && newData.val() >= -10 && newData.val() <= 10" },
+            "gun": { ".validate": "newData.isString() && newData.val().length <= 16" },
+            "t": { ".validate": "newData.val() === now" },
+            "$other": { ".validate": false }
+          }
+        }
+      }
+    }
+  }
+}
