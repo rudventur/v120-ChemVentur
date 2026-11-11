@@ -266,8 +266,9 @@ const IGNORE = /status of 404|popcoin-shop-items|net::ERR_FAILED|ERR_INTERNET_DI
   await page.evaluate(() => { const q = document.querySelector('.s3g-molq'); q.value = 'C1CC(('; q.dispatchEvent(new Event('input')); });
   await page.focus('.s3g-molq'); await page.keyboard.press('Enter');
   await page.waitForFunction(() => { const o = CHEMVENTUR.Stage3Game.Game.lastIdentify; return o && o.query === 'C1CC(('; }, { timeout: 30000 });
-  const badView = await page.evaluate(() => ({ status: document.querySelector('.s3g-status').textContent, notes: document.querySelector('.s3g-notes').textContent, hint: document.querySelector('.s3g-molhint').textContent }));
-  ok(/❌/.test(badView.status) && /Error:/.test(badView.notes) && /not valid/.test(badView.hint), 'bad input in the box shows the reason in the status line and the window', badView.status);
+  // (other game messages may take over the status line a moment later, so the status is caught as it is written)
+  const badView = await page.evaluate(() => ({ err: CHEMVENTUR.Stage3Game.Game.lastIdentify.error, notes: document.querySelector('.s3g-notes').textContent, hint: document.querySelector('.s3g-molhint').textContent }));
+  ok(/branch is not closed/.test(badView.err) && /Error: .*branch is not closed/.test(badView.notes) && /not valid/.test(badView.hint), 'bad input in the box shows the reason in the window (and in the status line)', badView.err);
   if (LIVE) {
     await page.evaluate(() => { const q = document.querySelector('.s3g-molq'); q.value = 'C2H6O'; });
     await page.focus('.s3g-molq'); await page.keyboard.press('Enter');
