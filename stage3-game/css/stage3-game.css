@@ -312,3 +312,24 @@
   html.s3g-has-rbox #topRightUser.open #Ricons, html.s3g-has-rbox #topRightUser #Ricons { top: 2px; right: 44px; gap: 6px; }
   html.s3g-has-rbox #topRightUser #Ricons .Ricon { width: 32px; height: 32px; font-size: 15px; }
 }
+
+/* ===== molecule data window: search box, matches, copy buttons (s3g-molinput.js) ===== */
+.s3g-id { box-sizing: border-box; max-height: calc(100vh - 68px); max-height: calc(100dvh - 68px); overflow-y: auto; overscroll-behavior: contain; }
+.s3g-molsearch { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 4px; }
+.s3g-molq { flex: 1; min-width: 0; resize: vertical; background: #001a08; color: #d8ffe0; border: 1px solid var(--g2, #00aa2b);
+  border-radius: 6px; padding: 5px 7px; font: 12px/1.35 "Courier New", monospace; outline: none; }
+.s3g-molq:focus { border-color: var(--cy, #00e5ff); box-shadow: 0 0 6px rgba(0, 229, 255, .35); }
+.s3g-molhint { font-size: 10px; color: var(--g2, #00aa2b); margin: 0 0 6px; min-height: 12px; }
+.s3g-molhint.s3g-molbad { color: var(--warn, #ffb000); }
+.s3g-choices { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; align-items: center; } .s3g-choices:empty { display: none; }
+.s3g-choice { font: 10px "Courier New", monospace; background: #002a10; color: #d8ffe0; border: 1px solid #0a5; border-radius: 10px; padding: 2px 7px; cursor: pointer; }
+.s3g-choice.active { border-color: var(--cy, #00e5ff); color: var(--cy, #00e5ff); }
+.s3g-molsvg { display: block; width: 100%; max-width: 300px; height: auto; margin: 0 auto 6px; background: #fff; border-radius: 6px; }
+.s3g-molsvg[hidden] { display: none; }
+.s3g-info dd.s3g-copyrow { display: flex; gap: 4px; align-items: flex-start; }
+.s3g-info .s3g-val { margin: 0; flex: 1; min-width: 0; word-break: break-all; }
+.s3g-copy { flex: none; font-size: 11px; line-height: 1; padding: 2px 4px; background: transparent; border: 1px solid #0a5; border-radius: 4px; cursor: pointer; }
+.s3g-copy:disabled { opacity: .3; cursor: default; }
+body.s3g-idopen #s3g-hull-panel { display: none; }
+.s3g-molsvg { max-height: 34vh; width: auto; max-width: 100%; }
+@media (max-height: 500px) { .s3g-molsvg { max-height: 26vh; } .s3g-id { font-size: 11px; padding: 8px; } }

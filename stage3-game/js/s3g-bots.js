@@ -362,21 +362,21 @@
 
     // Scientist asks RDKit + PubChem about its biggest build
     async _eureka(bot, W) {
-      const S = CV.Stage3Chem;
+      const M = G.MolInput || CV.MolInput;
       const comps = W.components().filter(c => c.atoms.length >= 2 && c.atoms.some(a => bot.made.has(a)));
-      if (!comps.length || !S) return;
+      if (!comps.length || !M) return;
       const comp = comps.sort((x, y) => y.atoms.length - x.atoms.length)[0];
       bot.busy = true;
       try {
-        const rd = await S.RDKit.analyze(W.toMolblock(comp));
-        const cid = rd ? await S.PubChem.cidFromSmiles(rd.canonical) : null;
-        if (cid) {
-          const rec = await S.lookup(String(cid), 'cid');
-          bot.stats.lastFind = rec.props.title;
+        const rec = await M.fromBuild(W.toMolblock(comp), { want3D: false });
+        if (rec.cid) {
+          bot.stats.lastFind = rec.name;
           this.stat(bot, 'eurekas');
-          this.say(bot, '🔬 Eureka! I synthesised ' + rec.props.title + ' (' + rec.props.formula + ', CID ' + cid + ')');
+          this.say(bot, '🔬 Eureka! I synthesised ' + rec.name + ' (' + rec.formula + ', CID ' + rec.cid + ')');
+        } else if (rec.sources.offline) {
+          this.say(bot, '🔬 Lab equipment offline: RDKit says ' + (rec.formula || W.formulaOf(comp)) + (rec.smiles ? ' (' + rec.smiles + ')' : ''));
         } else {
-          this.say(bot, '🔬 Hmm, ' + (rd ? rd.formula + ' (' + rd.canonical + ')' : W.formulaOf(comp)) + ' is not in PubChem… a new discovery?');
+          this.say(bot, '🔬 Hmm, ' + (rec.sources.rdkit ? rec.formula + ' (' + rec.smiles + ')' : W.formulaOf(comp)) + ' is not in PubChem… a new discovery?');
         }
       } catch (e) {
         this.say(bot, '🔬 Lab equipment offline (' + (e.message || e) + ')');
@@ -551,9 +551,9 @@
       const at = V.add(bot.pos, { x: 0, y: -4, z: 0 }), vel = { x: bot.vel.x * 0.3, y: -3, z: bot.vel.z * 0.3 };
       let made = null, label = '';
       try {
-        const rec = await CV.Stage3Chem.lookup(name, 'name');
-        const parsed = rec && rec.is3D ? G.parseMolblock(rec.sdf) : null;
-        if (parsed) { made = W.spawnMolecule(parsed, at, 'bot', vel, false); label = rec.props.title + ' (' + rec.props.formula + ')'; }
+        const rec = await (G.MolInput || CV.MolInput).resolve(name, { kind: 'name' });
+        const parsed = rec && rec.coords3D ? (G.MolInput || CV.MolInput).toSpawn(rec) : null;
+        if (parsed) { made = W.spawnMolecule(parsed, at, 'bot', vel, false); label = rec.name + ' (' + rec.formula + ')'; }
       } catch (e) { /* offline: fall back below */ }
       if (!made) {                                  // offline fallback: hand-made water
         const o = W.spawnAtom('O', at, vel, 'bot');
