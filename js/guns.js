@@ -414,7 +414,70 @@
     }
   };
 
-  // ProjectilePhysics stays the same (already clean)
-  CHEMVENTUR.ProjectilePhysics = CHEMVENTUR.ProjectilePhysics || {};
-  // ... (keep existing update methods if present, or they live elsewhere)
+  // ProjectilePhysics restored from the first v120 commit (the cleanup had left an empty stub, which stopped Stages 1 and 2)
+    CHEMVENTUR.ProjectilePhysics = {
+    updateGravityOrbs(orbs, atoms, W, H, ts) {
+      const now = Date.now();
+      for (let i = orbs.length - 1; i >= 0; i--) {
+        const o = orbs[i];
+        if (now - o.createTime > o.lifetime) { o.active = false; orbs.splice(i, 1); continue; }
+        o.x += o.vx * ts; o.y += o.vy * ts; o.vx *= 0.99; o.vy *= 0.99; o.phase += 0.08;
+        atoms.forEach(a => {
+          if (a.special?.includes('hole')) return;
+          const d = Math.hypot(o.x - a.x, o.y - a.y);
+          if (d < o.orbSize + o.glowSize + 120 && d > 8) {
+            const f = (o.strength * 1.2) / (d * 0.25);
+            a.vx += (o.x - a.x) / d * f * ts; a.vy += (o.y - a.y) / d * f * ts;
+          }
+        });
+        if (o.x < -50 || o.x > W + 50 || o.y < -50 || o.y > H + 50) { o.active = false; orbs.splice(i, 1); }
+      }
+    },
+    
+    updateTimeZones(zones, W, H) {
+      const now = Date.now();
+      for (let i = zones.length - 1; i >= 0; i--) {
+        const z = zones[i];
+        if (now - z.createTime > z.lifetime) { zones.splice(i, 1); continue; }
+        z.x += z.vx * 0.3; z.y += z.vy * 0.3; z.vx *= 0.995; z.vy *= 0.995; z.phase += 0.05;
+        if (z.x < -z.size || z.x > W + z.size || z.y < -z.size || z.y > H + z.size) zones.splice(i, 1);
+      }
+    },
+    
+    updateAntigun(proj, atoms, W, H) {
+      for (let i = proj.length - 1; i >= 0; i--) {
+        const p = proj[i];
+        p.x += p.vx; p.y += p.vy;
+        p.trail.unshift({x: p.x, y: p.y});
+        if (p.trail.length > p.trailLength) p.trail.pop();
+        if (p.x < -50 || p.x > W + 50 || p.y < -50 || p.y > H + 50) { proj.splice(i, 1); continue; }
+        atoms.forEach(a => {
+          if (a.special?.includes('hole')) return;
+          const d = Math.hypot(p.x - a.x, p.y - a.y);
+          if (p.type === 'photon' && d < 70) {
+            const f = p.repelStrength / (d * 0.4);
+            a.vx += (a.x - p.x) / d * f; a.vy += (a.y - p.y) / d * f;
+          } else if (p.type === 'tachyon' && d < 50) {
+            a.vx += (Math.random() - 0.5) * 8; a.vy += (Math.random() - 0.5) * 8;
+          }
+        });
+        if (p.type === 'antimatter') {
+          for (let j = atoms.length - 1; j >= 0; j--) {
+            if (Math.hypot(p.x - atoms[j].x, p.y - atoms[j].y) < 25) {
+              atoms.splice(j, 1); proj.splice(i, 1); return {type: 'hit'};
+            }
+          }
+        }
+      }
+    },
+    
+    getLocalTimeScale(x, y, zones, globalTs) {
+      let lt = globalTs;
+      zones.forEach(z => {
+        const d = Math.hypot(z.x - x, z.y - y);
+        if (d < z.size) { const b = 1 - d / z.size; lt = lt * (1 - b) + (globalTs * z.localTimeScale) * b; }
+      });
+      return lt;
+    }
+  };
 })();

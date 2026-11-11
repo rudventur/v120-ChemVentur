@@ -29,7 +29,7 @@
     ['gunElectron', 'guns', 'Electrogun', ['Digit3']], ['gunC2c', 'guns', 'c2c tone gun', ['Digit4']],
     ['gunChaos', 'guns', 'Chaos shotgun', ['Digit5']], ['gunMix', 'guns', 'Mix shotgun', ['Backquote']], ['gunAtom', 'guns', 'Atom gun', ['Digit6']],
     ['gunShotgun', 'guns', 'Atom shotgun', ['Digit7']], ['gunAnti', 'guns', 'Anti gun', ['Digit8']],
-    ['gunGrav', 'guns', 'Gravity gun', ['Digit9']], ['gunTime', 'guns', 'Time gun', ['Digit0']],
+    ['gunGrav', 'guns', 'Gravity gun', ['Digit9']], ['gunTime', 'guns', 'Time gun', ['Digit0']], ['gunNet', 'guns', 'Scrap net gun', ['KeyN']], ['repair', 'game', 'Repair ship with metal', ['KeyU']],
     ['powerUp', 'guns', 'More power or volts', ['Equal', 'NumpadAdd']], ['powerDown', 'guns', 'Less power or volts', ['Minus', 'NumpadSubtract']],
     ['elementPrev', 'guns', 'Previous element', ['KeyZ']], ['elementNext', 'guns', 'Next element', ['KeyX']],
     ['c2cMode', 'guns', 'c2c chromatic or major', ['KeyC']],
@@ -53,9 +53,9 @@
     esdf: { label: 'E S D F', info: 'E S D F fly (more room for the little finger), arrows turn, V is down, W is rudder right.', set: {
       moveForward: ['KeyE'], moveLeft: ['KeyS'], moveBack: ['KeyD'], moveRight: ['KeyF'], moveUp: ['KeyR'], moveDown: ['KeyV'],
       rudderLeft: ['KeyQ'], rudderRight: ['KeyW'] } },
-    ijkl: { label: 'I J K L', info: 'I J K L fly with the right hand, W A S D turn with the left. Bots move to V, discovery banners to Y.', set: {
+    ijkl: { label: 'I J K L', info: 'I J K L fly with the right hand, W A S D turn with the left. Bots move to V, discovery banners to Y, the scrap net gun to the full stop key, repair to the semicolon key.', set: {
       moveForward: ['KeyI'], moveLeft: ['KeyJ'], moveBack: ['KeyK'], moveRight: ['KeyL'], moveUp: ['KeyU'], moveDown: ['KeyN'],
-      pitchUp: ['KeyW'], pitchDown: ['KeyS'], turnLeft: ['KeyA'], turnRight: ['KeyD'], bots: ['KeyV'], discovery: ['KeyY'] } },
+      pitchUp: ['KeyW'], pitchDown: ['KeyS'], turnLeft: ['KeyA'], turnRight: ['KeyD'], bots: ['KeyV'], discovery: ['KeyY'], gunNet: ['Period'], repair: ['Semicolon'] } },
     numpad: { label: 'Left-handed numpad', info: 'Mouse in your left hand: the number pad flies (8 4 5 6, 9 up, 7 down, 1 and 3 rudder), 0 fires, arrows turn.', set: {
       moveForward: ['Numpad8'], moveLeft: ['Numpad4'], moveBack: ['Numpad5', 'Numpad2'], moveRight: ['Numpad6'], moveUp: ['Numpad9'], moveDown: ['Numpad7'],
       rudderLeft: ['Numpad1'], rudderRight: ['Numpad3'], fire: ['Space', 'Numpad0'] } }

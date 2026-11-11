@@ -159,7 +159,7 @@ const errors = [];
     ok(r3[0].ok && r3[1].length === 0 && r3[2].includes('KeyM') && r3[3].length === 0, '"take it" moves the key and leaves the other action without one, never two on one key', J(r3));
     const r4 = await S(page, () => { const K = CHEMVENTUR.Stage3Game.Keys; return ['Escape', 'ControlLeft', 'AltRight', 'MetaLeft', 'Tab'].map(c => K.set('rain', 0, c).reason); });
     ok(r4.every(x => x === 'forbidden'), 'Escape, Ctrl, Alt, Meta and Tab cannot be bound', J(r4));
-    const r5 = await S(page, () => { const K = CHEMVENTUR.Stage3Game.Keys; K.set('rain', 0, 'KeyU'); K.set('rain', 1, 'KeyU'); const one = K.bind.rain.filter(c => c === 'KeyU').length; return [one, K.set('rain', 1, null).ok, K.codes('rain')]; });
+    const r5 = await S(page, () => { const K = CHEMVENTUR.Stage3Game.Keys; K.set('rain', 0, 'Quote'); K.set('rain', 1, 'Quote'); const one = K.bind.rain.filter(c => c === 'Quote').length; return [one, K.set('rain', 1, null).ok, K.codes('rain')]; });
     ok(r5[0] === 1 && r5[1] === true && r5[2].length === 0, 'the same key twice on one action keeps one slot; a slot can be cleared', J(r5));
     const saved = await S(page, () => JSON.parse(localStorage.getItem('cv.s3g.keys.v1')));
     ok(saved && saved.v === 1 && saved.bind && saved.bind.help && saved.bind.help.includes('KeyM'), 'bindings are saved in localStorage ' + KEY);
