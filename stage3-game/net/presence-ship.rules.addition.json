@@ -1,5 +1,5 @@
 {
-  "_note": "NOT APPLIED. Proposed addition for the popcoin Firebase Realtime Database rules (popcoin/database.rules.json in rudventur/RudVentur.com), next to \"popcoin\" and \"presence\" inside \"rules\". It adds a separate games/chemventur node, so popcoin and the useRbox presence rules stay exactly as they are. Remove this _note key before pasting.",
+  "_note": "NOT APPLIED. Proposed addition for the popcoin Firebase Realtime Database rules (popcoin/database.rules.json in rudventur/RudVentur.com), next to \"popcoin\", \"presence\", \"channels\" and \"profiles\" inside \"rules\". It adds a separate games/chemventur node, so every existing rule stays exactly as it is. A ship can only be written by its own signed-in useR, only while that useR is shown ONLINE in the same presence room, and it may carry only the position, the gun and the public profile fields (p): name, avatar, robot and the shared 'right now' lines. Remove this _note key before pasting.",
   "games": {
     "chemventur": {
       "rooms": {
@@ -8,7 +8,7 @@
           ".validate": "$room.matches(/^[a-z0-9_-]{1,32}$/)",
           "$uid": {
             ".write": "auth != null && auth.uid === $uid",
-            ".validate": "newData.hasChildren(['x', 'y', 'z', 't']) && root.child('presence').child('rooms').child($room).child($uid).exists()",
+            ".validate": "newData.hasChildren(['x', 'y', 'z', 't']) && root.child('presence').child('rooms').child($room).child($uid).child('online').val() === true",
             "x": { ".validate": "newData.isNumber() && newData.val() >= -200 && newData.val() <= 200" },
             "y": { ".validate": "newData.isNumber() && newData.val() >= -200 && newData.val() <= 200" },
             "z": { ".validate": "newData.isNumber() && newData.val() >= -200 && newData.val() <= 200" },
@@ -17,6 +17,23 @@
             "roll": { ".validate": "newData.isNumber() && newData.val() >= -10 && newData.val() <= 10" },
             "gun": { ".validate": "newData.isString() && newData.val().length <= 16" },
             "t": { ".validate": "newData.val() === now" },
+            "p": {
+              ".validate": "newData.hasChildren(['name'])",
+              "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 32" },
+              "avatar": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 8" },
+              "robot": { ".validate": "newData.isBoolean() && newData.val() === true" },
+              "now": {
+                "mood": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 24" },
+                "status": { ".validate": "newData.isString() && newData.val().matches(/^(available|busy|away|playing)$/)" },
+                "doing": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 60" },
+                "energy": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 12" },
+                "chat": { ".validate": "newData.isBoolean()" },
+                "game": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 40" },
+                "looking": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 60" },
+                "$other": { ".validate": false }
+              },
+              "$other": { ".validate": false }
+            },
             "$other": { ".validate": false }
           }
         }

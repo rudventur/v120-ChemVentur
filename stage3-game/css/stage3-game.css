@@ -312,3 +312,13 @@
   html.s3g-has-rbox #topRightUser.open #Ricons, html.s3g-has-rbox #topRightUser #Ricons { top: 2px; right: 44px; gap: 6px; }
   html.s3g-has-rbox #topRightUser #Ricons .Ricon { width: 32px; height: 32px; font-size: 15px; }
 }
+
+/* ghost ships' name tags (js/s3g-net.js): avatar, name, 🤖; tap or click opens that player's profile in the useRbox */
+.s3g-ghosttags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.s3g-ghosttag { position: absolute; transform: translate(-50%, -100%); pointer-events: auto; cursor: pointer; white-space: nowrap;
+  font: 600 12px/1.2 system-ui, sans-serif; color: #fff; background: rgba(0, 0, 0, 0.62); border: 1px solid var(--gc, #0ff);
+  border-radius: 12px; padding: 3px 9px; box-shadow: 0 0 8px var(--gc, #0ff); max-width: 40vw; overflow: hidden; text-overflow: ellipsis; }
+.s3g-ghosttag:hover, .s3g-ghosttag:focus-visible { background: rgba(0, 0, 0, 0.85); outline: none; }
+.s3g-ghosttag[hidden] { display: none; }
+.s3g-touch .s3g-ghosttag { min-height: 28px; padding: 5px 11px; font-size: 13px; }
+.s3g-netvis { margin-top: 4px; }
