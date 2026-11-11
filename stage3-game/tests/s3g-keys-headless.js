@@ -70,7 +70,7 @@ const errors = [];
   {
     const page = await open();
     const K = await S(page, () => { const k = CHEMVENTUR.Stage3Game.Keys; return { actions: k.ACTIONS.map(a => ({ id: a.id, codes: k.codes(a.id), hold: a.hold })), conflicts: k.conflicts(), preset: k.preset }; });
-    const want = { gunProton: 'Digit1', gunNeutron: 'Digit2', gunElectron: 'Digit3', gunC2c: 'Digit4', gunShotgun5: 'Digit5', gunAtom: 'Digit6', gunShotgun: 'Digit7', gunAnti: 'Digit8', gunGrav: 'Digit9', gunTime: 'Digit0',
+    const want = { gunProton: 'Digit1', gunNeutron: 'Digit2', gunElectron: 'Digit3', gunC2c: 'Digit4', gunChaos: 'Digit5', gunMix: 'Backquote', gunAtom: 'Digit6', gunShotgun: 'Digit7', gunAnti: 'Digit8', gunGrav: 'Digit9', gunTime: 'Digit0',
       rain: 'KeyM', grid: 'KeyG', help: 'KeyH', bots: 'KeyJ', discovery: 'KeyK', identify: 'KeyB', swap: 'KeyT', pause: 'KeyP', options: 'KeyO', c2cMode: 'KeyC',
       moveForward: 'KeyW', moveLeft: 'KeyA', moveBack: 'KeyS', moveRight: 'KeyD', moveUp: 'KeyR', moveDown: 'KeyF', turnLeft: 'ArrowLeft', turnRight: 'ArrowRight', pitchUp: 'ArrowUp', pitchDown: 'ArrowDown',
       rudderLeft: 'KeyQ', rudderRight: 'KeyE', fire: 'Space', elementPrev: 'KeyZ', elementNext: 'KeyX' };
@@ -87,10 +87,11 @@ const errors = [];
     let badg = [];
     for (const c of Object.keys(guns)) { await page.keyboard.press(c); await sleep(60); const s = await st(page); if (s.gun !== guns[c]) badg.push(c + '→' + s.gun); }
     ok(badg.length === 0, 'number keys still pick the same guns', badg.join(',') || '9 guns');
-    const hasS5 = await S(page, () => !!CHEMVENTUR.Stage3Game.Game.hud.gunBtns.shotgun5);
     await page.keyboard.press('Digit5'); await sleep(60);
     const g5 = (await st(page)).gun;
-    ok(hasS5 ? g5 === 'shotgun5' : g5 === 'time', 'key 5 = shotgun five when that gun is in the build, otherwise nothing happens', 'shotgun5 in build: ' + hasS5 + ', gun = ' + g5);
+    await page.keyboard.press('Backquote'); await sleep(60);
+    const gq = (await st(page)).gun;
+    ok(g5 === 'chaos' && gq === 'shotgun5', 'key 5 = CHAOS shotgun, the key left of 1 = mix shotgun', 'key 5 → ' + g5 + ', backquote → ' + gq);
     const a = await st(page); await page.keyboard.press('KeyM'); const b = await st(page); await page.keyboard.press('KeyM');
     ok(a.rain !== b.rain, 'M toggles molecule rain'); 
     await page.keyboard.press('KeyH'); const h1 = (await st(page)).help; await page.keyboard.press('KeyH'); ok(h1 === true && (await st(page)).help === false, 'H toggles help');
@@ -158,7 +159,7 @@ const errors = [];
     ok(r3[0].ok && r3[1].length === 0 && r3[2].includes('KeyM') && r3[3].length === 0, '"take it" moves the key and leaves the other action without one, never two on one key', J(r3));
     const r4 = await S(page, () => { const K = CHEMVENTUR.Stage3Game.Keys; return ['Escape', 'ControlLeft', 'AltRight', 'MetaLeft', 'Tab'].map(c => K.set('rain', 0, c).reason); });
     ok(r4.every(x => x === 'forbidden'), 'Escape, Ctrl, Alt, Meta and Tab cannot be bound', J(r4));
-    const r5 = await S(page, () => { const K = CHEMVENTUR.Stage3Game.Keys; K.set('rain', 0, 'KeyU'); K.set('rain', 1, 'KeyU'); const one = K.bind.rain.filter(c => c === 'KeyU').length; return [one, K.set('rain', 1, null).ok, K.codes('rain')]; });
+    const r5 = await S(page, () => { const K = CHEMVENTUR.Stage3Game.Keys; K.set('rain', 0, 'Quote'); K.set('rain', 1, 'Quote'); const one = K.bind.rain.filter(c => c === 'Quote').length; return [one, K.set('rain', 1, null).ok, K.codes('rain')]; });
     ok(r5[0] === 1 && r5[1] === true && r5[2].length === 0, 'the same key twice on one action keeps one slot; a slot can be cleared', J(r5));
     const saved = await S(page, () => JSON.parse(localStorage.getItem('cv.s3g.keys.v1')));
     ok(saved && saved.v === 1 && saved.bind && saved.bind.help && saved.bind.help.includes('KeyM'), 'bindings are saved in localStorage ' + KEY);

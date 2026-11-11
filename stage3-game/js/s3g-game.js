@@ -41,18 +41,21 @@
   }
 
   const GUNS = [
-    // key 5 is kept free for the planned "shotgun5"; the rain "gun" only toggles rain, so it lives on M
+    // key 5 is the chaos shotgun (s3g-chaos.js); the rain "gun" only toggles rain, so it lives on M
     // icon-only buttons in the HUD (name + key stay in the tooltip and on the START screen)
     { id: 'proton', key: '1', label: 'p⁺ SHOT', icon: '🔴', info: 'proton shotgun' },     // shotgun1proton (s3g-pne.js)
     { id: 'neutron', key: '2', label: 'n SHOT', icon: '⚪', info: 'neutron shotgun' },     // SHOTGUN2neutron (s3g-pne.js)
     { id: 'electron', key: '3', label: '⚡ ELECTRO', icon: '⚡', info: 'electron gun' },  // Electrogun (s3g-pne.js)
     { id: 'c2c', key: '4', label: 'c2c', icon: '🎵', info: 'c2c tone gun (notes bond / break atoms)' },
+    { id: 'chaos', key: '5', label: 'CHAOS', icon: '🎲', info: 'chaos shotgun: random parts from stages 0 to 3 (strings, anti-strings, protons, neutrons, electrons, atoms, molecules, gravity orbs, single notes). Small ones do little, rare ones open a black hole or quantum tunnel, some cause reality glitches' },
+    { id: 'shotgun5', key: '`', label: '✳ MIX', icon: '✳️', info: 'mix shotgun: random strings, protons, neutrons, charges, light and sound rings (key ` left of 1; same pellets and power as guns 1 and 2)' },   // s3g-pne.js
     { id: 'atom', key: '6', label: 'ATOM', icon: '⚛️', info: 'atom gun (wheel = element)' },
     { id: 'shotgun', key: '7', label: 'SHOT', icon: '💥', info: 'shotgun' },
     { id: 'rain', key: 'M', label: 'RAIN', icon: '🌧️', info: 'rain on / off' },
     { id: 'anti', key: '8', label: 'ANTI', icon: '🌀', info: 'anti gun' },
     { id: 'grav', key: '9', label: 'GRAV', icon: '🌍', info: 'gravity gun' },
-    { id: 'time', key: '0', label: 'TIME', icon: '⏳', info: 'time slow gun' }
+    { id: 'time', key: '0', label: 'TIME', icon: '⏳', info: 'time slow gun' },
+    { id: 'net', key: 'N', label: 'NET', icon: '🕸️', info: 'scrap net gun: big gluon nets at half the speed of light catch scrap and anything coming (s3g-scrapnet.js)' }
   ];
 
   const TARGETS = [
@@ -75,7 +78,7 @@
     keys: new Set(),
     mouse: { x: 0, y: 0, ndcX: 0, ndcY: 0, has: false, fireHeld: false, steer: false, lastX: 0, lastY: 0 },
     touch: { joy: null, steer: null, fire: false },
-    gun: 'atom', elementIdx: 1, c2cMode: 'chromatic', slow: 0,
+    gun: 'atom', timeScale: 1, timeRev: false, hist: [], histT: 0, elementIdx: 1, c2cMode: 'chromatic', slow: 0,
     seq: null, seqId: 0, seqWaiters: [], sequences: [],
     fireCooldown: 0, score: 0, targetIdx: 0, targetTimer: 0,
     rainOn: true, rainTimer: 2, rainBusy: false,
@@ -123,7 +126,7 @@
       A.unlock();
       if (this.hud) this.hud.startOverlay.hidden = true;
       const L = (id) => (G.Keys ? G.Keys.labelFor(id) : '?');
-      this._status('🚀 Go! ' + L('gunProton') + ' p⁺ shotgun ' + L('gunNeutron') + ' n shotgun ' + L('gunElectron') + ' ⚡ electro ' + L('gunC2c') + ' c2c ' + L('gunAtom') + ' ATOM ' + L('gunShotgun') + ' SHOT ' + L('gunAnti') + ' ANTI ' + L('gunGrav') + ' GRAV ' + L('gunTime') + ' TIME · ' + L('identify') + ' = identify · ' + L('grid') + ' = grid');
+      this._status('🚀 Go! ' + L('gunProton') + ' p⁺ shotgun ' + L('gunNeutron') + ' n shotgun ' + L('gunElectron') + ' ⚡ electro ' + L('gunC2c') + ' c2c ' + L('gunChaos') + ' CHAOS ' + L('gunMix') + ' mix ' + L('gunAtom') + ' ATOM ' + L('gunShotgun') + ' SHOT ' + L('gunAnti') + ' ANTI ' + L('gunGrav') + ' GRAV ' + L('gunTime') + ' TIME · ' + L('identify') + ' = identify · ' + L('grid') + ' = grid');
     },
 
     pause() { this.paused = true; },
@@ -133,6 +136,7 @@
       cancelAnimationFrame(this._raf);
       if (G.Bots) G.Bots.removeAll();
       W.reset();
+      if (G.Chaos) G.Chaos.reset();
       if (this.renderer) { this.renderer.dispose(); this.renderer.domElement.remove(); }
       if (this.hud) this.hud.root.remove();
       window.removeEventListener('keydown', this._onKeyDown);
@@ -369,6 +373,39 @@
       this.camera.lookAt(this.ship.position.clone().add(this._forward().multiplyScalar(10)));
     },
 
+    // ================= TIME SPEED (top-middle toggle): x1 -> x0.25 -> x2 -> backwards =================
+    cycleTime() {
+      let label;
+      if (this.timeRev) { this.timeRev = false; this.timeScale = 1; label = '×1'; }
+      else if (this.timeScale === 1) { this.timeScale = 0.25; label = '×0.25'; }
+      else if (this.timeScale === 0.25) { this.timeScale = 2; label = '×2'; }
+      else if (this.hist.length > 5) { this.timeRev = true; this.timeScale = 1; label = '⏪'; }
+      else { this.timeScale = 1; label = '×1'; }
+      this._timeLabel(label);
+      this._status('⏱ Time ' + (this.timeRev ? 'is running BACKWARDS' : 'speed ' + label));
+    },
+    _timeLabel(label) { if (this.hud && this.hud.timeBtn) this.hud.timeBtn.textContent = '⏱ ' + label; },
+    _record(dt) {
+      this.histT += dt;
+      if (this.histT < 1 / 30) return;
+      this.histT = 0;
+      this.hist.push(W.atoms.map(a => [a, a.pos.x, a.pos.y, a.pos.z, a.vel.x, a.vel.y, a.vel.z]));
+      if (this.hist.length > 150) this.hist.shift();
+    },
+    _rewind(dt) {
+      const n = Math.max(1, Math.round(dt * 30 * 1.5));
+      let snap = null;
+      for (let i = 0; i < n && this.hist.length; i++) snap = this.hist.pop();
+      if (snap) {
+        const alive = new Set(W.atoms);
+        for (const e of snap) {
+          const a = e[0]; if (!alive.has(a)) continue;
+          a.pos.x = e[1]; a.pos.y = e[2]; a.pos.z = e[3]; a.vel.x = e[4]; a.vel.y = e[5]; a.vel.z = e[6];
+        }
+      }
+      if (!this.hist.length) { this.timeRev = false; this.timeScale = 1; this._timeLabel('×1'); this._status('⏪ Back to the start of the recording. Time runs forward again'); }
+    },
+
     // ================= GUNS =================
     selectGun(id) {
       if (!GUNS.find(g => g.id === id)) return;
@@ -389,8 +426,10 @@
     },
 
     _trigger() {
+      if (G.Chaos && this.fireCooldown <= 0 && !this.seq) G.Chaos.coincidence(this);   // supercoincidence: any gun, sometimes
       if (this.gun === 'c2c') { this.fireC2C(); return; }
       if (G.PNE && G.PNE.fire(this)) return;
+      if (G.Chaos && G.Chaos.fire(this)) return;
       if (G.GunRack && G.GunRack.fire(this)) return;
       if (this.fireCooldown > 0) return;
       const nose = this._nose(), dir = this._aimDir();
@@ -573,12 +612,13 @@
         this.fireCooldown = Math.max(0, this.fireCooldown - dt);
         if ((this.mouse.fireHeld || this.held('fire') || this.touch.fire || (G.Steering && G.Steering.fireHeld)) && this.gun !== 'c2c') this._trigger();
         this._updateSeq(dt);
-        const sim = this.slow > 0 ? dt * 0.22 : dt;
+        let sim = (this.slow > 0 ? dt * 0.22 : dt) * (this.timeRev ? 0 : this.timeScale);
         if (this.slow > 0) this.slow -= dt;
         if (G.GunRack) G.GunRack.tick(this, dt);
         if (G.PNE) G.PNE.tick(this, dt);
         if (G.Grid) G.Grid.tick(this, dt);
-        W.step(sim, { shipPos: this.ship.position, shipRadius: 2.2 });
+        if (G.Chaos) G.Chaos.tick(this, dt, sim);
+        if (this.timeRev) this._rewind(dt); else { this._record(dt); W.step(sim, { shipPos: this.ship.position, shipRadius: 2.2 }); }
         if (G.Bots) G.Bots.update(dt);
         this.targetTimer -= dt;
         if (this.targetTimer <= 0) { this.targetTimer = 0.5; this._checkTargets(); }
@@ -602,14 +642,15 @@
 
     // one press of a hotkey action (the keys themselves are chosen in the bindings table)
     hotkey(id, e) {
-      const GUN = { gunProton: 'proton', gunNeutron: 'neutron', gunElectron: 'electron', gunC2c: 'c2c', gunShotgun5: 'shotgun5', gunAtom: 'atom', gunShotgun: 'shotgun', gunAnti: 'anti', gunGrav: 'grav', gunTime: 'time' };
+      const GUN = { gunProton: 'proton', gunNeutron: 'neutron', gunElectron: 'electron', gunC2c: 'c2c', gunChaos: 'chaos', gunMix: 'shotgun5', gunAtom: 'atom', gunShotgun: 'shotgun', gunAnti: 'anti', gunGrav: 'grav', gunTime: 'time', gunNet: 'net' };
       if (GUN[id]) {
         if (GUNS.find(g => g.id === GUN[id])) this.selectGun(GUN[id]);
-        else this._status('Shotgun five is not in this build yet.');
+        else this._status('That gun is not in this build yet.');
         return;
       }
       switch (id) {
         case 'c2cMode': this.toggleC2CMode(); break;
+        case 'repair': if (G.ScrapNet) G.ScrapNet.repair(); break;
         case 'elementPrev': this.cycleElement(-1); break;
         case 'elementNext': this.cycleElement(1); break;
         case 'identify': this.identify(); break;
@@ -631,7 +672,7 @@
     _relabel() {
       const h = this.hud, K = G.Keys; if (!h || !K) return;
       GUNS.forEach(g => {
-        const id = { proton: 'gunProton', neutron: 'gunNeutron', electron: 'gunElectron', c2c: 'gunC2c', shotgun5: 'gunShotgun5', atom: 'gunAtom', shotgun: 'gunShotgun', anti: 'gunAnti', grav: 'gunGrav', time: 'gunTime', rain: 'rain' }[g.id];
+        const id = { proton: 'gunProton', neutron: 'gunNeutron', electron: 'gunElectron', c2c: 'gunC2c', chaos: 'gunChaos', shotgun5: 'gunMix', atom: 'gunAtom', shotgun: 'gunShotgun', anti: 'gunAnti', grav: 'gunGrav', time: 'gunTime', rain: 'rain' }[g.id];
         g.keyLabel = id ? K.labelFor(id) : g.key;
         const b = h.gunBtns[g.id]; if (b) b.title = g.keyLabel + ' · ' + g.label + ' — ' + g.info;
       });
@@ -656,10 +697,11 @@
         [L('turnLeft') + ' ' + L('turnRight') + ' ' + L('pitchUp') + ' ' + L('pitchDown') + ' · right-drag', 'turn left / right, nose up / down'],
         ['Mouse', 'aim (crosshair)'], ['Left click · ' + L('fire'), 'fire'],
         [L('gunProton') + ' · ' + L('gunNeutron') + ' · ' + L('gunElectron'), 'shotgun1proton (red p⁺ mist) · SHOTGUN2neutron (blue n, falls slightly) · Electrogun (chain lightning, makes ions)'],
-        [L('gunC2c') + ' · ' + L('gunShotgun5') + ' · ' + L('gunAtom') + ' · ' + L('gunShotgun'), 'c2c tone gun · shotgun five (when it is in the build) · atom gun · atom shotgun'],
+        [L('gunC2c') + ' · ' + L('gunChaos') + ' · ' + L('gunMix'), 'c2c tone gun · CHAOS shotgun · mix shotgun (strings, p⁺, n, charges, light, sound rings)'],
+        [L('gunAtom') + ' · ' + L('gunShotgun'), 'atom gun · atom shotgun'],
         [L('gunAnti') + ' · ' + L('gunGrav') + ' · ' + L('gunTime'), 'anti gun · gravity orb · time bubble'],
-        ['Right-click', 'guns 1 and 2: pellets per shot 1 · 3 · 7 · 15 · 31 (also the "x7" button)'],
-        ['Wheel · ' + L('powerUp', ' / ') + ' · ' + L('powerDown', ' / '), 'guns 1 and 2: power = range 15–90 (also the 💪 button); other guns: wheel = atom element'],
+        ['Right-click', 'guns 1, 2 and mix: pellets per shot 1 · 3 · 7 · 15 · 31 (also the "x7" button) · Electrogun: amps = bolts 1 · 2 · 3 · 5 · 10 (⚡ button)'],
+        ['Wheel · ' + L('powerUp', ' / ') + ' · ' + L('powerDown', ' / '), 'guns 1, 2 and mix: power = range 15–90 (💪 button) · Electrogun: volts 0 V → 1 TV (🔋 button) · other guns: wheel = atom element'],
         [L('c2cMode'), 'c2c 13 (chromatic) ⇄ c2c 8 (major)'], [L('elementPrev') + ' / ' + L('elementNext'), 'atom element'], [L('identify'), 'What did I build?'],
         [L('grid'), 'Grid panel: charges · gravity · temperature · pressure'],
         [L('swap'), 'swap in PubChem 3D conformer'], [L('rain'), 'molecule rain on/off'], [L('pause'), 'pause'], [L('help'), 'help'],
@@ -736,7 +778,7 @@
       cvs.addEventListener('pointercancel', up);
       cvs.addEventListener('wheel', (e) => {
         e.preventDefault();
-        if (G.PNE && G.PNE.usesPellets(this.gun)) G.PNE.adjustPower(this.gun, e.deltaY < 0 ? +1 : -1);   // guns 1 and 2: wheel = power
+        if (G.PNE && G.PNE.hasPower(this.gun)) G.PNE.adjustPower(this.gun, e.deltaY < 0 ? +1 : -1);   // guns 1, 2 and mix: power · Electrogun: volts
         else this.cycleElement(e.deltaY > 0 ? 1 : -1);
       }, { passive: false });
     },
@@ -938,7 +980,10 @@
         tb('🧪', () => this.identify())
       ]);
 
+      h.timeBtn = mkBtn('⏱ ×1', () => this.cycleTime(), 'Time speed: ×1, ×0.25, ×2, then backwards ⏪ (about 5 seconds)');
+      h.timeBtn.classList.add('s3g-timebtn');
       h.root = el('div', { className: 's3g-hud' }, [
+        h.timeBtn,
         el('div', { className: 's3g-left' }, [
           el('div', { className: 's3g-tl' }, [h.title, h.stats, h.target]),
           el('div', { className: 's3g-bl' }, [h.palette, h.inv])
