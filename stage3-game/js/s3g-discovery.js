@@ -90,14 +90,14 @@
       this.enabled = on == null ? !this.enabled : !!on;
       if (!this.enabled) { this.queue.length = 0; if (this.active) this.active.t = Math.max(this.active.t, DURATION - FADE); }
       this.save();
-      if (this.game) this.game._status('✨ FIRST DISCOVERY banners ' + (this.enabled ? 'ON' : 'OFF') + ' (K)');
+      if (this.game) this.game._status('✨ FIRST DISCOVERY banners ' + (this.enabled ? 'ON' : 'OFF') + (G.Keys ? G.Keys.tag('discovery') : ' (K)'));
       return this.enabled;
     },
 
     reset() {
       this.discovered = {}; this.queue.length = 0;
       this.save();
-      if (this.game) this.game._status('✨ Discoveries reset: everything is new again (Shift+K)');
+      if (this.game) this.game._status('✨ Discoveries reset: everything is new again (Shift+' + (G.Keys ? G.Keys.labelFor('discovery') : 'K') + ')');
     },
 
     _begin(c) {

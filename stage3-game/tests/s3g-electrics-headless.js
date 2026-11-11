@@ -140,9 +140,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   // ===== shotgun5 =====
   await clear();
-  await page.keyboard.press('Digit5'); await sleep(150);
+  await page.keyboard.press('Backquote'); await sleep(150);
   s = await st();
-  ok(s.pelletBtn === 'shotgun5 x7' && /^💪 3\/5 · 50u/.test(s.powerBtn) && s.wattText === null, 'key 5 selects shotgun5; HUD "shotgun5 x7" and its power button', s.pelletBtn + ' · ' + s.powerBtn);
+  ok(s.pelletBtn === 'shotgun5 x7' && /^💪 3\/5 · 50u/.test(s.powerBtn) && s.wattText === null, 'key ` (left of 1) selects the mix shotgun (shotgun5; key 5 stays the chaos shotgun); HUD "shotgun5 x7" and its power button', s.pelletBtn + ' · ' + s.powerBtn);
   await page.mouse.click(640, 380, { button: 'right' }); await sleep(100);
   await page.keyboard.press('Equal'); await sleep(50); s = await st();
   ok(s.modeIdx.shotgun5 === 3 && s.powerIdx.shotgun5 === 3, 'right-click (pellets) and + (power) work for shotgun5 like guns 1 and 2', s.pelletBtn + ' · ' + s.powerBtn);

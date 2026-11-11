@@ -86,3 +86,13 @@ Still saying v119 (left as-is): `js/left-panel-sync.js` header comment, the `js/
 - **v120** (Oct 2026): Stage 3 3D molecules (PubChem 3D + RDKit.js + 3Dmol.js), What did I build?, Spawn in game.
 - **v119** (Sep 2026): Left Panel taskbar, room code panel, phone controls. See `README-V119.md`.
 - **v118**: AI Players & Chat Edition. **v117 Multi**: multiplayer + touch + microphone.
+
+
+## 🚀🕸️🔧 Stage 3 additions: rocket launch points, scrap net gun, metal only repair
+
+Stages 0, 1 and 2 (`game-v118.html`) are unchanged, apart from one fix: `ProjectilePhysics` in `js/guns.js` was an empty stub that froze Stages 1 and 2; it is restored from the first v120 commit.
+
+Stage 3 (the 3D game, `index.html` and `stage3-game/`):
+- **Rocket launch points** (`stage3-game/js/s3g-rockets.js`): shots leave from alternating wing tips, start at 30% speed, burn to full speed and leave an exhaust trail. Musical c2c dots keep the nose.
+- **🕸️ Scrap net gun, key N** (`stage3-game/js/s3g-scrapnet.js`; with the I J K L preset it is the full stop key). Key 6 stays the atom gun. A big yellow net flies at half the speed of light (game scale: light = 120 units per second) and catches loose atoms it passes (bonded molecules are left alone). When it stops it anchors as a gluon web in the Stage 0 style (rings and spokes), joined to the nearest anchored web by a gluon thread, and keeps catching anything coming for 7 seconds.
+- **Damage and metal only repair:** scrap debris drifts through the arena and some flies at the ship; a hit takes 8% of the hull. The hull glows red and smokes as it gets damaged. The 🛠️ Hull and Scrap Hold panel counts metal atoms (metals of the periodic table, as classified in `js/periodicTableFull.js`) on their own. **Only metal atoms repair**: key U or the 🔧 button fixes 4% per metal atom. Non-metals, metalloids and other scrap never repair.
