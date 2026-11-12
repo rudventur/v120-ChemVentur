@@ -281,7 +281,7 @@ The test checks:
 `node tests/s3g-keys-headless.js http://127.0.0.1:8877/stage3-game/ [outDir] [screenshotDir]` runs the keyboard and stage selector test (80 checks): defaults, rebinding, conflicts, presets, labels, guards, keyboard button visibility, no on-screen keyboard, stage selector, screenshots `keys-phone-start.png`, `keys-phone-window.png`, `keys-desktop-start.png`, `keys-desktop-window.png`.
 
 ## Caveats (it's a beginning)
-- No multiplayer (deliberately out of scope).
+- Multiplayer is opt-in and off by default: other players are ghost ships with name tags from their approved useRbox profile (tap a tag or press I for their profile). Ship positions need the database rules in `net/presence-ship.rules.addition.json` to be published first. See `net/README-NET.md`.
 - Bonds are simple springs with 1-3 repulsion. Geometry is approximate, not real VSEPR. The PubChem conformer swap shows real geometry.
 - Rain and identification need network access (PubChem, unpkg for RDKit). If RDKit is unavailable or can't parse the build, identification sends the molblock straight to PubChem. Without network, the rain falls back to random H/O atoms.
 - Browsers only allow sound after a user gesture (the START button handles this).

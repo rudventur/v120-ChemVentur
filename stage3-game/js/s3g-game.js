@@ -738,6 +738,7 @@
         case 'discovery': if (G.Discovery) { if (e && e.shiftKey) G.Discovery.reset(); else G.Discovery.toggle(); } break;
         case 'options': if (G.Steering) G.Steering.togglePanel(); break;
         case 'keysWindow': if (G.Keys) G.Keys.toggle(); break;
+        case 'peerProfile': if (G.Net) G.Net.showNearest(); break;   // the nearest other ship's profile in the useRbox (js/s3g-net.js)
       }
     },
 
@@ -780,6 +781,7 @@
         [L('swap'), 'swap in PubChem 3D conformer'], [L('rain'), 'molecule rain on/off'], [L('pause'), 'pause'], [L('help'), 'help'],
         [L('discovery') + ' · Shift+' + L('discovery'), 'FIRST DISCOVERY banners on/off · reset discoveries'],
         [L('bots'), 'bots: spawn all 10 / remove all'], [L('options') + ' · ⚙', 'steering options: mode (Classic · Cessna · Gamepad), sensitivity, assists, left-handed'],
+        [L('peerProfile') + ' · tap a name tag', 'multiplayer: open the nearest player\'s profile in the useRbox'],
         [L('keysWindow') + ' · 🔤', 'keyboard options: change any key, presets (shown only when a keyboard is found)'],
         ['Cessna mode', L('moveLeft') + '/' + L('moveRight') + ' aileron (roll) · ' + L('moveForward') + '/' + L('moveBack') + ' elevator (' + L('moveBack') + ' = nose up) · ' + L('rudderLeft') + '/' + L('rudderRight') + ' rudder · ' + L('moveUp') + '/' + L('moveDown') + ' throttle (held); touch: right stick aileron + elevator, left stick rudder + throttle'],
         ['Touch', 'left: move · right: steer · buttons']

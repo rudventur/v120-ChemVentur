@@ -28,7 +28,7 @@ const errors = [];
     const ctx = await browser.createBrowserContext();
     const page = await ctx.newPage();
     page.on('pageerror', e => errors.push('pageerror: ' + e.message));
-    page.on('console', m => { if (m.type() === 'error' && !/status of 404/.test(m.text())) errors.push('console: ' + m.text()); });
+    page.on('console', m => { if (m.type() === 'error' && !/status of 404/.test(m.text()) && !/rudventur\.github\.io\/RudVentur\.com/.test(m.text() + ' ' + ((m.location && m.location() || {}).url || ''))) errors.push('console: ' + m.text()); /* the outside useRbox embed's own network errors are not the game's */ });
     await page.setViewport({ width: o.w || 1280, height: o.h || 760, isMobile: !!o.touch, hasTouch: !!o.touch, deviceScaleFactor: o.dsf || 1 });
     if (o.pre) await page.evaluateOnNewDocument(o.pre, o.preArg);
     await page.goto(url + (o.query || ''), { waitUntil: 'load', timeout: 60000 });
