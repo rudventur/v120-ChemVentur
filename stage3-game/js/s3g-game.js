@@ -503,7 +503,6 @@
     },
 
     async identify(comp) {
-      const S = CV.Stage3Chem;
       comp = comp || this._pickComponent();
       if (!comp) { this._status('🧪 Nothing bonded yet. Shoot atoms (gun 1) at each other to bond them!', 'warn'); return null; }
       comp.atoms.forEach(a => { a.flash = { color: '#ffffff', t: 0.8 }; });
@@ -512,28 +511,24 @@
       const molblock = W.toMolblock(comp);
       const out = { atoms: comp.atoms.length, bonds: comp.bonds.length, explicitFormula: explicit, canonical: '', cid: null, title: '', formula: '', is3D: false, notes: [] };
       try {
-        const rd = await S.RDKit.analyze(molblock);
-        let cid = null;
-        if (rd) {
-          out.canonical = rd.canonical;
-          out.rdkitFormula = rd.formula;
-          const hExplicit = comp.atoms.filter(a => a.symbol === 'H').length;
-          const m = /H(\d*)/.exec(rd.formula.replace(/^C\d*/, ''));
-          const hTotal = rd.formula.indexOf('H') === -1 ? 0 : (m && m[1] ? parseInt(m[1], 10) : 1);
-          if (hTotal > hExplicit) out.notes.push('RDKit filled in ' + (hTotal - hExplicit) + ' implicit H');
-          cid = await S.PubChem.cidFromSmiles(rd.canonical);
-        } else {
-          out.notes.push('RDKit could not read it (odd valence?) or is unavailable: asked PubChem directly');
-          cid = await S.PubChem.cidFromMolblock(molblock);
-        }
-        if (cid) {
-          const rec = await S.lookup(String(cid), 'cid');
-          out.cid = cid; out.title = rec.props.title; out.formula = rec.props.formula; out.is3D = rec.is3D;
-          out.props = rec.props; out.sdf = rec.is3D ? rec.sdf : null;
+        const rec = await G.MolInput.fromBuild(molblock);
+        out.record = rec;
+        out.canonical = rec.smiles;
+        out.rdkitFormula = rec.sources.rdkit ? rec.formula : '';
+        const hExplicit = comp.atoms.filter(a => a.symbol === 'H').length;
+        const hTotal = rec.atoms.filter(a => a.symbol === 'H').length;
+        if (rec.sources.rdkit && hTotal > hExplicit) out.notes.push('RDKit filled in ' + (hTotal - hExplicit) + ' implicit H');
+        out.notes = out.notes.concat(rec.notes);
+        out.cid = rec.cid;
+        out.formula = rec.formula || explicit;
+        out.props = Game._compatProps(rec);
+        if (rec.cid) {
+          out.title = rec.name; out.is3D = rec.coords3D; out.sdf = rec.coords3D ? rec.molblock : null;
           this.score += 5;
+        } else if (rec.sources.offline) {
+          out.title = 'Offline: ' + (rec.formula || explicit) + ' (name unknown)';
         } else {
           out.title = 'Unknown: not in PubChem';
-          out.formula = rd ? rd.formula : explicit;
         }
       } catch (e) {
         out.error = e.message || String(e);
@@ -546,9 +541,85 @@
       return out;
     },
 
+    // old shape of the property block, filled from a MolInput record
+    _compatProps(rec) {
+      return { cid: rec.cid, title: rec.name, iupac: rec.iupac, formula: rec.formula, mw: rec.mass, smiles: rec.smiles, inchi: rec.inchi,
+        inchikey: rec.inchikey, xlogp: rec.xlogp, tpsa: rec.tpsa, charge: rec.charge };
+    },
+
+    // ================= MOLECULE LOOKUP (data window search box) =================
+    // Any molecule text -> the data window; resolves with the view object (also kept as lastIdentify)
+    async lookupMolecule(text, opts) {
+      const h = this.hud;
+      this._status('🔎 Looking up ' + (String(text || '').split('\n')[0].slice(0, 40) || '…') + '…');
+      const out = { lookup: true, query: text, atoms: 0, bonds: 0, explicitFormula: '', canonical: '', cid: null, title: '', formula: '', is3D: false, notes: [] };
+      try {
+        const rec = await G.MolInput.resolve(text, Object.assign({ synonyms: true }, opts || {}));
+        out.record = rec;
+        out.canonical = rec.smiles; out.cid = rec.cid; out.formula = rec.formula; out.is3D = rec.coords3D;
+        out.title = rec.name || (rec.sources.offline ? 'Offline: name unknown' : rec.cid ? 'CID ' + rec.cid : 'Not in PubChem');
+        out.atoms = rec.atoms.length; out.bonds = rec.bonds.length;
+        out.props = Game._compatProps(rec);
+        out.notes = rec.notes.slice();
+        out.sdf = rec.molblock || null;
+      } catch (e) {
+        out.error = e.message || String(e);
+      }
+      this.lastIdentify = out;
+      this._showIdentify(out);
+      this._status(out.error ? '❌ ' + out.error : '🔎 ' + out.title + (out.formula ? ' (' + out.formula + ')' : '') + ' · read as ' + out.record.kindLabel, out.error ? 'error' : 'ok');
+      if (!out.error) W.emit('lookedUp', out);
+      return out;
+    },
+
+    openLookup() {
+      const h = this.hud;
+      if (!h) return;
+      h.idPanel.hidden = false;
+      setTimeout(() => { try { h.molQ.focus(); } catch (e) {} }, 0);
+    },
+
+    // Put a looked-up molecule into the arena, in front of the ship
+    dropLookup(rec) {
+      rec = rec || this.lastIdentify;
+      const shape = rec && rec.record && G.MolInput.toSpawn(rec.record);
+      if (!shape) return null;
+      const nose = this._nose(), f = this._forward();
+      const at = { x: nose.x + f.x * 14, y: nose.y + f.y * 14, z: nose.z + f.z * 14 };
+      const mol = W.spawnMolecule(shape, at, 'pubchem', { x: 0, y: 0, z: 0 }, true);
+      if (mol) {
+        mol.atoms.forEach(a => { a.flash = { color: '#00ffff', t: 1 }; });
+        this._status('⬇️ Dropped ' + (rec.title || 'the molecule') + ' into the arena (' + mol.atoms.length + ' atoms' + (rec.record.coords3D ? ', real 3D shape' : ', flat 2D layout') + ')', 'ok');
+        rec.comp = { atoms: mol.atoms, bonds: mol.bonds };
+        rec.swapped = true;
+        if (this.hud) this.hud.swapBtn.disabled = true;
+      } else this._status('⚠️ No room in the arena for ' + shape.atoms.length + ' more atoms', 'warn');
+      return mol;
+    },
+
+    async copyField(key) {
+      const rec = this.lastIdentify && this.lastIdentify.record;
+      const v = rec ? ({ smiles: rec.smiles, inchi: rec.inchi, inchikey: rec.inchikey, cid: rec.cid ? String(rec.cid) : '' })[key] : '';
+      const label = { smiles: 'SMILES', inchi: 'InChI', inchikey: 'InChIKey', cid: 'CID' }[key] || key;
+      if (!v) { this._status('📋 No ' + label + ' to copy yet', 'warn'); return false; }
+      let ok = false;
+      try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(v); ok = true; } } catch (e) { ok = false; }
+      if (!ok) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = v; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select(); ok = document.execCommand('copy'); ta.remove();
+        } catch (e) { ok = false; }
+      }
+      this.lastCopied = { key, value: v, ok };
+      this._status(ok ? '📋 Copied ' + label + ': ' + (v.length > 48 ? v.slice(0, 48) + '…' : v) : '📋 Copy blocked by the browser: select the text instead', ok ? 'ok' : 'warn');
+      return ok;
+    },
+
     // Replace the player's build with PubChem's real 3D conformer
     swapInConformer(rec) {
       rec = rec || this.lastIdentify;
+      if (rec && rec.lookup && !rec.comp) return this.dropLookup(rec);
       if (!rec || !rec.sdf || !rec.comp) return null;
       const parsed = G.parseMolblock(rec.sdf);
       if (!parsed) return null;
@@ -589,8 +660,8 @@
       const vel = { x: (Math.random() - 0.5) * 2, y: -3 - Math.random() * 2, z: (Math.random() - 0.5) * 2 };
       try {
         const name = RAIN[Math.floor(Math.random() * RAIN.length)];
-        const rec = await CV.Stage3Chem.lookup(name, 'name');
-        const parsed = rec && rec.is3D ? G.parseMolblock(rec.sdf) : null;
+        const rec = await G.MolInput.resolve(name, { kind: 'name' });
+        const parsed = rec && rec.coords3D ? G.MolInput.toSpawn(rec) : null;
         if (parsed) W.spawnMolecule(parsed, at, 'rain', vel, false);
         else throw new Error('no 3D');
       } catch (e) {
@@ -687,7 +758,7 @@
         h.actionBtns.help.textContent = '❔ Help' + K.tag('help');
       }
       if (h.startHint) h.startHint.textContent = 'Help (' + K.labelFor('help') + ') shows the controls · sound starts after START';
-      if (h.swapBtn) h.swapBtn.textContent = '🔁 Swap in PubChem 3D' + K.tag('swap');
+      if (h.swapBtn && !(this.lastIdentify && this.lastIdentify.lookup)) h.swapBtn.textContent = '🔁 Swap in PubChem 3D' + K.tag('swap');
       if (G.Grid && G.Grid.btn) G.Grid.btn.textContent = '▦ Grid' + K.tag('grid');
       if (G.Steering && G.Steering.gear) G.Steering.gear.title = 'Steering options' + K.tag('options');
       if (h.helpList) this._fillHelp();
@@ -910,12 +981,13 @@
       const mkBtn = (text, fn, title) => { const b = el('button', { type: 'button', className: 's3g-btn', text, title }); b.addEventListener('click', fn); return b; };
       h.actionBtns = {
         identify: mkBtn('🧪 What did I build?', () => this.identify()),
+        lookup: mkBtn('🔎', () => this.openLookup(), 'Look up a molecule: SMILES, InChI, InChIKey, name, formula, CID, CAS or molfile'),
         rain: mkBtn('🌧️ Rain', () => this.hotkey('rain')),
         bots: mkBtn('🤖 Bots', () => { if (G.Bots) G.Bots.toggleAll(); }),
         help: mkBtn('❔ Help', () => { h.help.hidden = !h.help.hidden; })
       };
       h.actions = el('div', { className: 's3g-actions' }, [
-        h.actionBtns.identify, h.actionBtns.rain, h.actionBtns.bots,
+        h.actionBtns.identify, h.actionBtns.lookup, h.actionBtns.rain, h.actionBtns.bots,
         mkBtn('🔊 Sound', (e) => { A.setMuted(!A.muted); e.target.textContent = A.muted ? '🔇 Sound' : '🔊 Sound'; }),
         h.actionBtns.help,
         mkBtn('⌨️', () => this._deskClick('#rvd-bl', 0), 'Keyboards'),
@@ -923,21 +995,60 @@
         mkBtn('🍿', () => this._deskClick('#rvd-br', 0), 'Popcorn Hub')
       ]);
 
-      // identify panel
+      // identify panel = the molecule data window (search box on top, facts below, copy buttons)
       h.idRows = {};
+      h.copyBtns = {};
       const dl = el('dl', { className: 's3g-info' });
-      [['title', 'Name'], ['formula', 'Formula'], ['built', 'You built'], ['smiles', 'SMILES'], ['mw', 'Mol. weight'], ['xlogp', 'XLogP'], ['tpsa', 'TPSA'], ['inchikey', 'InChIKey'], ['cid', 'PubChem']].forEach(([k, label]) => {
-        const dd = el('dd', { text: '—' });
+      [['title', 'Name'], ['formula', 'Formula'], ['charge', 'Charge'], ['built', 'You built'], ['smiles', 'SMILES'], ['inchi', 'InChI'], ['inchikey', 'InChIKey'],
+        ['mw', 'Mol. weight'], ['xlogp', 'XLogP'], ['tpsa', 'TPSA'], ['cid', 'PubChem'], ['source', 'Source']].forEach(([k, label]) => {
+        const copyable = ['smiles', 'inchi', 'inchikey', 'cid'].indexOf(k) !== -1;
+        const dd = el(copyable ? 'span' : 'dd', { text: '—' });
         h.idRows[k] = dd;
-        dl.appendChild(el('dt', { text: label }));
-        dl.appendChild(dd);
+        const dt = el('dt', { text: label });
+        if (k === 'built') { h.builtDt = dt; }
+        dl.appendChild(dt);
+        if (copyable) {
+          const cb = el('button', { type: 'button', className: 's3g-copy', text: '📋', title: 'Copy ' + label, 'aria-label': 'Copy ' + label });
+          cb.addEventListener('click', () => this.copyField(k));
+          h.copyBtns[k] = cb;
+          dl.appendChild(el('dd', { className: 's3g-copyrow' }, [dd, cb]));
+          dd.className = 's3g-val';
+        } else dl.appendChild(dd);
       });
+      h.molQ = el('textarea', { className: 's3g-molq', rows: 1, spellcheck: 'false', autocomplete: 'off', autocapitalize: 'off',
+        placeholder: 'SMILES, InChI, InChIKey, name, formula, CID, CAS or a molfile…', 'aria-label': 'Molecule to look up' });
+      h.molHint = el('div', { className: 's3g-molhint', text: 'Type or paste a molecule. Enter looks it up (Shift+Enter for a new line).' });
+      const go = () => { const v = h.molQ.value; if (v.trim()) this.lookupMolecule(v); else this.lookupMolecule(''); };
+      h.molQ.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); go(); }
+        else if (e.key === 'Escape') { e.preventDefault(); h.molQ.blur(); h.idPanel.hidden = true; }
+      });
+      h.molQ.addEventListener('keyup', (e) => e.stopPropagation());
+      h.molQ.addEventListener('input', () => {
+        const v = h.molQ.value;
+        h.molQ.rows = Math.min(6, Math.max(1, v.split('\n').length));
+        if (!v.trim()) { h.molHint.textContent = 'Type or paste a molecule. Enter looks it up (Shift+Enter for a new line).'; h.molHint.className = 's3g-molhint'; return; }
+        const g = G.MolInput.guess(v);
+        h.molHint.textContent = g.kind === 'error' ? '⚠️ ' + g.label : 'Looks like: ' + g.label + (g.alt ? ' (or a ' + G.MolInput.KIND_LABEL[g.alt.kind] + ')' : '');
+        h.molHint.className = 's3g-molhint' + (g.kind === 'error' || /not valid/.test(g.label) ? ' s3g-molbad' : '');
+      });
+      h.molGo = mkBtn('🔎 Look up', go);
+      h.molChoices = el('div', { className: 's3g-choices' });
+      h.molSvg = el('img', { className: 's3g-molsvg', alt: '2D drawing (RDKit)', hidden: true });
       h.idNotes = el('ul', { className: 's3g-notes' });
       h.swapBtn = mkBtn('🔁 Swap in PubChem 3D', () => this.swapInConformer());
+      h.idTitle = el('div', { className: 's3g-panel-title', text: '🧪 WHAT DID I BUILD?' });
       h.idPanel = el('div', { className: 's3g-panel s3g-id', hidden: true }, [
-        el('div', { className: 's3g-panel-title', text: '🧪 WHAT DID I BUILD?' }), dl, h.idNotes,
+        h.idTitle,
+        el('div', { className: 's3g-molsearch' }, [h.molQ, h.molGo]), h.molHint, h.molChoices,
+        h.molSvg, dl, h.idNotes,
         el('div', { className: 's3g-row' }, [h.swapBtn, mkBtn('✕ Close', () => { h.idPanel.hidden = true; })])
       ]);
+      // while the data window is open, the hull panel (fixed, top right) steps aside so it doesn't cover it
+      if (typeof MutationObserver !== 'undefined') {
+        new MutationObserver(() => document.body.classList.toggle('s3g-idopen', !h.idPanel.hidden)).observe(h.idPanel, { attributes: true, attributeFilter: ['hidden'] });
+      }
 
       // help + start overlays
       const helpList = el('dl', { className: 's3g-help-list' });
@@ -1018,21 +1129,57 @@
     },
 
     _showIdentify(o) {
-      const h = this.hud, R = h.idRows, p = o.props || {};
+      const h = this.hud, R = h.idRows, p = o.props || {}, rec = o.record || null;
+      const dash = (v) => (v === null || v === undefined || v === '') ? '—' : String(v);
+      h.idTitle.textContent = o.lookup ? '🔎 MOLECULE' : '🧪 WHAT DID I BUILD?';
       R.title.textContent = o.title || '—';
+      if (rec && rec.synonyms && rec.synonyms.length) R.title.title = 'Also called: ' + rec.synonyms.slice(0, 6).join(', ');
       R.formula.textContent = o.formula || '—';
-      R.built.textContent = o.explicitFormula + ' (' + o.atoms + ' atoms, ' + o.bonds + ' bonds)';
+      const ch = rec ? rec.charge : p.charge;
+      R.charge.textContent = ch ? (ch > 0 ? '+' + ch : '−' + Math.abs(ch)) : (rec || p.charge != null ? '0 (neutral)' : '—');
+      h.builtDt.textContent = o.lookup ? 'Read as' : 'You built';
+      R.built.textContent = o.lookup ? (rec ? rec.kindLabel + ' · ' + o.atoms + ' atoms, ' + o.bonds + ' bonds' : '—')
+        : o.explicitFormula + ' (' + o.atoms + ' atoms, ' + o.bonds + ' bonds)';
       R.smiles.textContent = o.canonical || p.smiles || '—';
+      R.inchi.textContent = dash(rec ? rec.inchi : p.inchi);
       R.mw.textContent = p.mw != null ? p.mw.toFixed(2) + ' g/mol' : '—';
       R.xlogp.textContent = p.xlogp != null ? String(p.xlogp) : '—';
       R.tpsa.textContent = p.tpsa != null ? p.tpsa + ' Å²' : '—';
       R.inchikey.textContent = p.inchikey || '—';
       R.cid.textContent = '';
-      if (o.cid) R.cid.appendChild(el('a', { href: CV.Stage3Chem.PubChem.compoundUrl(o.cid), target: '_blank', rel: 'noopener noreferrer', text: 'CID ' + o.cid + ' ↗' }));
-      else R.cid.textContent = 'not in PubChem';
+      if (o.cid) R.cid.appendChild(el('a', { href: G.MolInput.PubChem.compoundUrl(o.cid), target: '_blank', rel: 'noopener noreferrer', text: 'CID ' + o.cid + ' ↗' }));
+      else R.cid.textContent = (rec && rec.sources.offline) ? 'offline' : o.error ? '—' : 'not in PubChem';
+      const src = rec ? rec.sources : null;
+      R.source.textContent = src ? [src.rdkit ? 'RDKit' : '', src.pubchem ? 'PubChem' : '', src.pubchem3D ? '3D conformer' : '', src.cache ? 'cache' : '', src.offline ? 'offline' : ''].filter(Boolean).join(' · ') || '—' : '—';
+      Object.keys(h.copyBtns).forEach(k => {
+        const v = rec ? ({ smiles: rec.smiles, inchi: rec.inchi, inchikey: rec.inchikey, cid: rec.cid })[k] : null;
+        h.copyBtns[k].disabled = !v;
+      });
+      // 2D drawing from RDKit, shown as an image (never injected as markup)
+      if (rec && rec.svg) { h.molSvg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(rec.svg); h.molSvg.hidden = false; }
+      else { h.molSvg.hidden = true; h.molSvg.removeAttribute('src'); }
+      // other matches (formula search, shared InChIKey)
+      h.molChoices.textContent = '';
+      if (rec && rec.choices && rec.choices.length > 1) {
+        h.molChoices.appendChild(el('span', { className: 's3g-small', text: 'Matches: ' }));
+        rec.choices.forEach(c => {
+          const b = el('button', { type: 'button', className: 's3g-choice' + (c.cid === rec.cid ? ' active' : ''), text: c.name, title: (c.formula || '') + ' · CID ' + c.cid });
+          b.addEventListener('click', () => this.lookupMolecule('CID ' + c.cid, {}).then(v => {
+            // keep the list so the player can try the next one
+            if (v.record && !v.record.choices.length) { v.record.choices = rec.choices; this._showIdentify(v); }
+          }));
+          h.molChoices.appendChild(b);
+        });
+      }
       h.idNotes.textContent = '';
       (o.notes || []).concat(o.error ? ['Error: ' + o.error] : []).forEach(n => h.idNotes.appendChild(el('li', { text: n })));
-      h.swapBtn.disabled = !o.sdf;
+      if (o.lookup) {
+        h.swapBtn.textContent = '⬇️ Drop into the arena';
+        h.swapBtn.disabled = !(rec && rec.atoms && rec.atoms.length);
+      } else {
+        h.swapBtn.textContent = '🔁 Swap in PubChem 3D' + (G.Keys ? G.Keys.tag('swap') : '');
+        h.swapBtn.disabled = !o.sdf;
+      }
       h.idPanel.hidden = false;
     },
 

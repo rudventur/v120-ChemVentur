@@ -152,11 +152,36 @@ Each dot gets its own hue (one per pitch class, `hsl(pc·30°)`), its own size (
 | sharps (C#, D#, F#, G#, A#) | **dissonance**: breaks one bond on the hit atom |
 | other naturals (D E F G A B) | **harmony**: a gentle push plus bonding energy |
 
+## Molecule input (`js/s3g-molinput.js`)
+One input for every molecule in Stage 3. The 🔎 button (top right row) opens the data window with a search box; "What did I build?", the Scientist and Produce bots and the molecule rain all go through the same file, so every molecule ends up as the same record.
+
+| You type or paste | Example | Needs PubChem? |
+|---|---|---|
+| SMILES (isomeric, aromatic, charged, salts) | `CCO`, `c1ccccc1`, `F/C=C/F`, `[NH4+]`, `OC[C@H]1OC(O)[C@H](O)[C@@H](O)[C@@H]1O` | no: RDKit reads it, PubChem adds the name |
+| molfile or SDF block | paste the whole block (V2000 or V3000) | no; a pasted 3D block keeps its own 3D coordinates |
+| InChI | `InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3` (or `1S/…`) | yes |
+| InChIKey | `LFQSCWFLJHTTHZ-UHFFFAOYSA-N` | yes |
+| PubChem compound number | `702`, `CID 702`, `cid:702` | yes |
+| CAS number (check digit tested) | `64-17-5` | yes |
+| name (common or IUPAC, spaces fine) | `caffeine`, `acetic acid`, `2-propanol` | yes |
+| molecular formula | `C2H6O`, `CO₂`, `NH₄⁺`, `SO4 2-`, `Ca(OH)2`, `CH3CH2OH` | yes; lists up to 10 matches to pick from |
+
+- **Auto-detect**, or force a type with a prefix: `smiles:`, `inchi:`, `inchikey:`, `cid:`, `cas:`, `name:`, `formula:`. `CO` reads as SMILES (methanol); `formula: CO` gives carbon monoxide.
+- **Clean-up**: spaces, curly quotes, zero-width characters, unicode subscripts and superscripts (`H₂O`, `NH₄⁺`), unicode dashes and minus signs.
+- **Bad input** gets a plain message in the status line and the window: open branch, open ring, open bracket, wrong CAS check digit, cut InChI, fake element, and so on.
+- **RDKit first** (local): validation, canonical SMILES, InChI, InChIKey, formula, mass, charge, 2D drawing and atoms. **PubChem second**: name, synonyms, compound number, properties and the 3D conformer.
+- **PubChem calls**: SMILES, InChI, names and molfiles go by POST, so `/`, `\`, `#` and spaces never break a URL. Built molecules are matched by InChIKey first. At most about 4 requests a second, a 10 second timeout, up to 3 retries with backoff for HTTP 503, 429 and network hiccups, then 20 seconds of failing fast so an offline game doesn't keep waiting.
+- **Cache**: memory plus localStorage (`cv.stage3.v1:mi1:…`). "Not in PubChem" answers are checked again after a day.
+- **Offline**: SMILES and molfiles still give the full structure from RDKit (no name). Names, formulas, InChI, InChIKey, CAS and compound numbers say clearly that they need PubChem. "What did I build?" shows `Offline: C2H6O (name unknown)` instead of an error. RDKit itself comes from unpkg, so the very first visit needs the internet.
+- **Data window**: Name (hover for synonyms), Formula, Charge, Read as / You built, SMILES 📋, InChI 📋, InChIKey 📋, weight, XLogP, TPSA, PubChem link 📋, Source (RDKit, PubChem, 3D conformer, cache, offline), the RDKit 2D drawing, match buttons, and **⬇️ Drop into the arena** for looked-up molecules.
+- **Record** (`CHEMVENTUR.MolInput.resolve(text)`): `smiles`, `flatSmiles`, `inchi`, `inchikey`, `cid`, `name`, `iupac`, `synonyms`, `formula`, `mass`, `exactMass`, `charge`, `xlogp`, `tpsa`, `atoms` and `bonds` (with hydrogens), `coords3D`, `molblock`, `molblock2D`, `svg`, `choices`, `alt`, `sources`, `notes`. Game builds: `MolInput.fromBuild(molblock)` and `MolInput.toSmiles(molblock)`.
+
 ## Files
 ```
 index.html                 page + boot snippet
 css/stage3-game.css        neon HUD
 js/stage3-chem.js          shared chemistry: elements, PubChem, RDKit, cache (same file as the Stage 3 overlay)
+js/s3g-molinput.js         one molecule input: SMILES, InChI, InChIKey, CID, CAS, name, formula, molfile -> one record
 js/s3g-core.js             config, elements/CPK, maths, molblock parser, C2C note series
 js/s3g-audio.js            Web Audio (tones, blips)
 js/s3g-world.js            pure simulation: atoms, bonds, projectiles, physics
@@ -172,13 +197,14 @@ tests/s3g-bots-headless.js headless Chrome test for the bots
 tests/s3g-guns-headless.js headless Chrome test for guns 1–3 and the Grid panel
 tests/s3g-electrics-headless.js headless Chrome test for the Electrogun electrics and shotgun5
 tests/s3g-steering-headless.js headless Chrome test for steering modes, options, touch sticks and a mocked gamepad
+tests/s3g-molinput-headless.js headless Chrome test for the molecule input: every input type, bad input, mocked offline and 503, live PubChem (LIVE=0 skips), data window
 screenshot-*.png
 ```
 CDNs (pinned): three.js `0.169.0` (jsDelivr, unpkg fallback) and RDKit.js `2025.3.4-1.0.0` (unpkg). Lookups use the PubChem PUG-REST API, and results are cached in localStorage under `cv.stage3.v1:`.
 
 ## Attaching it to ChemVentur later
 1. Copy `css/stage3-game.css` and `js/s3g-*.js` into the main repo. `js/stage3-chem.js` is shared with the Stage 3 overlay, so keep only one copy.
-2. Load the scripts in this order: `stage3-chem.js`, `s3g-core.js`, `s3g-audio.js`, `s3g-world.js`, `s3g-game.js`, `s3g-guns.js`, `s3g-discovery.js`, `s3g-bots.js`, `s3g-pne.js`, `s3g-grid.js`, `s3g-steering.js` (as in `index.html`). Discovery, bots, guns 1–3 and the Grid are optional; the game runs without them.
+2. Load the scripts in this order: `stage3-chem.js`, `s3g-molinput.js`, `s3g-core.js`, `s3g-audio.js`, `s3g-world.js`, `s3g-game.js`, `s3g-guns.js`, `s3g-discovery.js`, `s3g-bots.js`, `s3g-pne.js`, `s3g-grid.js`, `s3g-steering.js` (as in `index.html`). Discovery, bots, guns 1–3 and the Grid are optional; the game runs without them.
 3. Mount the game into any sized container, e.g. a full-screen overlay div:
 ```js
 const box = document.getElementById('stage3-game-overlay');      // position:fixed; inset:0
