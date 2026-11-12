@@ -299,3 +299,26 @@
   .s3g-keywin { padding: 8px 10px; }
 }
 .s3g-start { overflow: auto; justify-content: safe center; }
+
+/* ============================================
+   CAPITAL R (useRbox from RudVentur.com) + multiplayer preview (js/s3g-net.js)
+   the R sits top-right (58px at 14px); the game's top-right cluster moves left of it
+   ============================================ */
+.s3g-has-rbox .s3g-actions { top: 82px; right: 12px; }   /* below the R and its rolling icons, never under them */
+@media (max-width: 900px), (max-height: 500px) {
+  .s3g-has-rbox #topRightUser { top: 6px; right: 6px; }
+  .s3g-has-rbox #topRightUser #Rcircle { width: 36px; height: 36px; font-size: 18px; line-height: 36px; }
+  .s3g-has-rbox .s3g-actions { top: 50px; right: 8px; }
+  html.s3g-has-rbox #topRightUser.open #Ricons, html.s3g-has-rbox #topRightUser #Ricons { top: 2px; right: 44px; gap: 6px; }
+  html.s3g-has-rbox #topRightUser #Ricons .Ricon { width: 32px; height: 32px; font-size: 15px; }
+}
+
+/* ghost ships' name tags (js/s3g-net.js): avatar, name, 🤖; tap or click opens that player's profile in the useRbox */
+.s3g-ghosttags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.s3g-ghosttag { position: absolute; transform: translate(-50%, -100%); pointer-events: auto; cursor: pointer; white-space: nowrap;
+  font: 600 12px/1.2 system-ui, sans-serif; color: #fff; background: rgba(0, 0, 0, 0.62); border: 1px solid var(--gc, #0ff);
+  border-radius: 12px; padding: 3px 9px; box-shadow: 0 0 8px var(--gc, #0ff); max-width: 40vw; overflow: hidden; text-overflow: ellipsis; }
+.s3g-ghosttag:hover, .s3g-ghosttag:focus-visible { background: rgba(0, 0, 0, 0.85); outline: none; }
+.s3g-ghosttag[hidden] { display: none; }
+.s3g-touch .s3g-ghosttag { min-height: 28px; padding: 5px 11px; font-size: 13px; }
+.s3g-netvis { margin-top: 4px; }

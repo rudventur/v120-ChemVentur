@@ -108,6 +108,7 @@
       if (G.PNE) G.PNE.attach(this);
       if (G.Grid) G.Grid.attach(this);
       if (G.Steering) G.Steering.attach(this);   // steering modes: Classic (default), Cessna, Gamepad; options window (O)
+      if (G.Net) G.Net.attach(this);             // multiplayer preview (off by default) and the capital R glue: js/s3g-net.js
       if (G.Stages) G.Stages.attach(this);       // opening screen: stage selector
       if (G.Keys) { G.Keys.attach(this); G.Keys.on('change', () => this._relabel()); this._relabel(); }   // keyboard layer: bindings, labels, keyboard options window
       this._bindInput();
@@ -620,6 +621,7 @@
         if (G.Chaos) G.Chaos.tick(this, dt, sim);
         if (this.timeRev) this._rewind(dt); else { this._record(dt); W.step(sim, { shipPos: this.ship.position, shipRadius: 2.2 }); }
         if (G.Bots) G.Bots.update(dt);
+        if (G.Net) G.Net.tick(dt);
         this.targetTimer -= dt;
         if (this.targetTimer <= 0) { this.targetTimer = 0.5; this._checkTargets(); }
         if (this.rainOn) { this.rainTimer -= dt; if (this.rainTimer <= 0) { this.rainTimer = C.RAIN_INTERVAL; this._rainOne(); } }
@@ -665,6 +667,7 @@
         case 'discovery': if (G.Discovery) { if (e && e.shiftKey) G.Discovery.reset(); else G.Discovery.toggle(); } break;
         case 'options': if (G.Steering) G.Steering.togglePanel(); break;
         case 'keysWindow': if (G.Keys) G.Keys.toggle(); break;
+        case 'peerProfile': if (G.Net) G.Net.showNearest(); break;   // the nearest other ship's profile in the useRbox (js/s3g-net.js)
       }
     },
 
@@ -707,6 +710,7 @@
         [L('swap'), 'swap in PubChem 3D conformer'], [L('rain'), 'molecule rain on/off'], [L('pause'), 'pause'], [L('help'), 'help'],
         [L('discovery') + ' · Shift+' + L('discovery'), 'FIRST DISCOVERY banners on/off · reset discoveries'],
         [L('bots'), 'bots: spawn all 10 / remove all'], [L('options') + ' · ⚙', 'steering options: mode (Classic · Cessna · Gamepad), sensitivity, assists, left-handed'],
+        [L('peerProfile') + ' · tap a name tag', 'multiplayer: open the nearest player\'s profile in the useRbox'],
         [L('keysWindow') + ' · 🔤', 'keyboard options: change any key, presets (shown only when a keyboard is found)'],
         ['Cessna mode', L('moveLeft') + '/' + L('moveRight') + ' aileron (roll) · ' + L('moveForward') + '/' + L('moveBack') + ' elevator (' + L('moveBack') + ' = nose up) · ' + L('rudderLeft') + '/' + L('rudderRight') + ' rudder · ' + L('moveUp') + '/' + L('moveDown') + ' throttle (held); touch: right stick aileron + elevator, left stick rudder + throttle'],
         ['Touch', 'left: move · right: steer · buttons']

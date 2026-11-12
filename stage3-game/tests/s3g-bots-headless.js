@@ -16,7 +16,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.setViewport({ width: 1280, height: 760 });
   const errors = [];
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
-  page.on('console', m => { if (m.type() === 'error' && !/status of 404/.test(m.text())) errors.push('console: ' + m.text()); });
+  page.on('console', m => { if (m.type() === 'error' && !/status of 404/.test(m.text()) && !/rudventur\.github\.io\/RudVentur\.com/.test(m.text() + ' ' + ((m.location && m.location() || {}).url || ''))) errors.push('console: ' + m.text()); /* the outside useRbox embed's own network errors are not the game's */ });
   console.log('# bots @ ' + url);
   await page.goto(url + '?autostart=1', { waitUntil: 'load', timeout: 60000 });
   await page.evaluate(() => CHEMVENTUR.Stage3Game.ready);
